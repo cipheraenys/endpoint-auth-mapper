@@ -1,0 +1,33 @@
+# --- Confidential security output (NEVER commit) ---------------------------
+# The analyzer writes attack-surface maps here. These are sensitive artifacts.
+.security-reports/
+*.authmap.json
+*.authmap.sarif
+*.authmap.html
+
+# --- Python -----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# --- Virtual environments ---------------------------------------------------
+.venv/
+venv/
+env/
+
+# --- OS / editor noise ------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+.vscode/
+.idea/
