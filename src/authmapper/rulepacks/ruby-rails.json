@@ -1,0 +1,32 @@
+{
+  "name": "ruby-rails",
+  "language": "ruby",
+  "framework": "rails,sinatra",
+  "file_globs": ["**/config/routes.rb", "**/app/controllers/**/*.rb", "**/*.rb"],
+  "endpoint_model": "route",
+  "endpoint_patterns": [
+    {
+      "id": "rails-route-verb",
+      "regex": "\\b(get|post|put|patch|delete)\\s+['\"]([^'\"]+)['\"]",
+      "capture": { "method": 1, "path": 2 }
+    },
+    {
+      "id": "sinatra-route",
+      "regex": "\\b(get|post|put|patch|delete)\\s+['\"](/[^'\"]*)['\"]\\s+do",
+      "capture": { "method": 1, "path": 2 }
+    }
+  ],
+  "auth_signals": [
+    {
+      "id": "before-action-auth",
+      "regex": "before_action\\s+:(authenticate_user!|authenticate|require_login|require_admin|authorize)",
+      "scope": "file"
+    },
+    {
+      "id": "devise-authenticate",
+      "regex": "authenticate_user!",
+      "scope": "file"
+    }
+  ],
+  "exempt_paths": ["/health", "/healthz", "/ping", "/metrics", "/status", "/up"]
+}

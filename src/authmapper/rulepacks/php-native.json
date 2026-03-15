@@ -1,0 +1,37 @@
+{
+  "name": "php-native",
+  "language": "php",
+  "framework": "native",
+  "file_globs": ["**/*.php"],
+  "endpoint_model": "file",
+  "file_endpoint_method": "ANY",
+  "endpoint_patterns": [],
+  "auth_signals": [
+    {
+      "id": "require-auth-include",
+      "regex": "require(_once)?\\s*[('\"].*auth\\.php",
+      "scope": "file"
+    },
+    {
+      "id": "session-guard",
+      "regex": "\\$_SESSION\\s*\\[\\s*['\"][^'\"]*(logged_in|admin|user|auth)",
+      "scope": "file"
+    },
+    {
+      "id": "session-start",
+      "regex": "session_start\\s*\\(",
+      "scope": "file"
+    },
+    {
+      "id": "auth-function-call",
+      "regex": "\\b(require_login|check_auth|is_authenticated|is_superadmin|ensure_admin)\\s*\\(",
+      "scope": "file"
+    },
+    {
+      "id": "http-basic-auth",
+      "regex": "\\$_SERVER\\s*\\[\\s*['\"]PHP_AUTH_(USER|PW)",
+      "scope": "file"
+    }
+  ],
+  "exempt_paths": ["/health", "/ping", "/status"]
+}

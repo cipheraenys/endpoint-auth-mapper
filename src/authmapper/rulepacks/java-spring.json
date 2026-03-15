@@ -1,0 +1,32 @@
+{
+  "name": "java-spring",
+  "language": "java",
+  "framework": "spring",
+  "file_globs": ["**/*.java", "**/*.kt"],
+  "endpoint_model": "route",
+  "endpoint_patterns": [
+    {
+      "id": "spring-mapping",
+      "regex": "@(GetMapping|PostMapping|PutMapping|DeleteMapping|PatchMapping|RequestMapping)\\s*\\(\\s*(?:value\\s*=\\s*)?['\"]([^'\"]+)['\"]",
+      "capture": { "method": 1, "path": 2 }
+    }
+  ],
+  "auth_signals": [
+    {
+      "id": "method-security-annotation",
+      "regex": "@(PreAuthorize|PostAuthorize|Secured|RolesAllowed|PreFilter|PostFilter)\\b",
+      "scope": "file"
+    },
+    {
+      "id": "authentication-principal",
+      "regex": "@AuthenticationPrincipal\\b",
+      "scope": "same_line"
+    },
+    {
+      "id": "security-context",
+      "regex": "SecurityContextHolder\\.getContext\\(\\)",
+      "scope": "file"
+    }
+  ],
+  "exempt_paths": ["/health", "/actuator/health", "/ping", "/metrics", "/status"]
+}

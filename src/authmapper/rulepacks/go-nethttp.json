@@ -1,0 +1,33 @@
+{
+  "name": "go-nethttp",
+  "language": "go",
+  "framework": "net/http,chi,gin,mux",
+  "file_globs": ["**/*.go"],
+  "endpoint_model": "route",
+  "endpoint_patterns": [
+    {
+      "id": "stdlib-handlefunc",
+      "regex": "\\b(?:http|mux|r|router)\\.(HandleFunc|Handle)\\s*\\(\\s*['\"`]([^'\"`]+)['\"`]",
+      "capture": { "path": 2 },
+      "default_method": "ANY"
+    },
+    {
+      "id": "chi-gin-verb",
+      "regex": "\\b(?:r|router|group|g)\\.(GET|POST|PUT|DELETE|PATCH)\\s*\\(\\s*['\"`]([^'\"`]+)['\"`]",
+      "capture": { "method": 1, "path": 2 }
+    }
+  ],
+  "auth_signals": [
+    {
+      "id": "auth-middleware-wrap",
+      "regex": "\\b(AuthMiddleware|RequireAuth|Authenticated|JWTMiddleware|RequireLogin|Authorize|middleware\\.Auth)\\b",
+      "scope": "same_line"
+    },
+    {
+      "id": "router-use-auth",
+      "regex": "\\b(?:r|router|group|g)\\.Use\\s*\\([^)]*\\b(Auth|JWT|Authenticate)\\b",
+      "scope": "file"
+    }
+  ],
+  "exempt_paths": ["/health", "/healthz", "/ping", "/metrics", "/status"]
+}

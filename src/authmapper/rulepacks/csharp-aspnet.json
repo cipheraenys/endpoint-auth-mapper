@@ -1,0 +1,37 @@
+{
+  "name": "csharp-aspnet",
+  "language": "csharp",
+  "framework": "aspnet-core",
+  "file_globs": ["**/*.cs"],
+  "endpoint_model": "route",
+  "endpoint_patterns": [
+    {
+      "id": "attribute-route",
+      "regex": "\\[Http(Get|Post|Put|Delete|Patch)\\s*(?:\\(\\s*['\"]([^'\"]*)['\"])?",
+      "capture": { "method": 1, "path": 2 }
+    },
+    {
+      "id": "minimal-api-map",
+      "regex": "\\bapp\\.Map(Get|Post|Put|Delete|Patch)\\s*\\(\\s*['\"]([^'\"]+)['\"]",
+      "capture": { "method": 1, "path": 2 }
+    }
+  ],
+  "auth_signals": [
+    {
+      "id": "authorize-attribute",
+      "regex": "\\[Authorize\\b",
+      "scope": "file"
+    },
+    {
+      "id": "require-authorization",
+      "regex": "\\.RequireAuthorization\\s*\\(",
+      "scope": "same_line"
+    },
+    {
+      "id": "user-identity-check",
+      "regex": "User\\.Identity\\.IsAuthenticated",
+      "scope": "file"
+    }
+  ],
+  "exempt_paths": ["/health", "/healthz", "/ping", "/metrics", "/status"]
+}

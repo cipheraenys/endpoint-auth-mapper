@@ -1,0 +1,33 @@
+{
+  "name": "python-django",
+  "language": "python",
+  "framework": "django",
+  "file_globs": ["**/urls.py", "**/views.py", "**/api.py", "**/viewsets.py"],
+  "endpoint_model": "route",
+  "endpoint_patterns": [
+    {
+      "id": "django-path",
+      "regex": "\\b(?:path|re_path|url)\\s*\\(\\s*(?:r?['\"])([^'\"]*)['\"]",
+      "capture": { "path": 1 },
+      "default_method": "ANY"
+    }
+  ],
+  "auth_signals": [
+    {
+      "id": "auth-decorator",
+      "regex": "@(login_required|permission_required|user_passes_test|staff_member_required)\\b",
+      "scope": "file"
+    },
+    {
+      "id": "drf-permission-classes",
+      "regex": "permission_classes\\s*=\\s*\\[[^\\]]*(IsAuthenticated|IsAdminUser|DjangoModelPermissions|IsAuthenticatedOrReadOnly)",
+      "scope": "file"
+    },
+    {
+      "id": "login-url-setting",
+      "regex": "LoginRequiredMixin",
+      "scope": "file"
+    }
+  ],
+  "exempt_paths": ["/health", "/healthz", "/ping", "/metrics", "/status"]
+}

@@ -1,0 +1,28 @@
+{
+  "name": "python-flask",
+  "language": "python",
+  "framework": "flask",
+  "file_globs": ["**/*.py"],
+  "endpoint_model": "route",
+  "endpoint_patterns": [
+    {
+      "id": "flask-route",
+      "regex": "@(?:app|bp|blueprint|api)\\.(route|get|post|put|delete|patch)\\s*\\(\\s*['\"]([^'\"]+)['\"]",
+      "capture": { "path": 2 },
+      "default_method": "ANY"
+    }
+  ],
+  "auth_signals": [
+    {
+      "id": "login-required-decorator",
+      "regex": "@(login_required|jwt_required|auth_required|requires_auth|token_required|admin_required|permission_required|roles_required|fresh_login_required)\\b",
+      "scope": "file"
+    },
+    {
+      "id": "current-user-guard",
+      "regex": "\\b(current_user\\.is_authenticated|verify_jwt_in_request|g\\.user)\\b",
+      "scope": "file"
+    }
+  ],
+  "exempt_paths": ["/health", "/healthz", "/ping", "/metrics", "/status"]
+}
