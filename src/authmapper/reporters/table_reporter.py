@@ -12,9 +12,6 @@ import sys
 
 from ..core.model import AuthState, ScanResult, Severity
 
-# ANSI colors, gated on TTY + absence of NO_COLOR (https://no-color.org).
-_USE_COLOR = sys.stdout.isatty() and os.environ.get("NO_COLOR") is None
-
 _STATE_COLOR = {
     AuthState.EXPOSED: "\033[31m",    # red
     AuthState.UNKNOWN: "\033[33m",    # yellow
@@ -25,20 +22,26 @@ _RESET = "\033[0m"
 _BOLD = "\033[1m"
 
 
-def _c(text: str, color: str) -> str:
-    if not _USE_COLOR:
+def _use_color() -> bool:
+    """Check at call time whether stdout supports color output."""
+    return sys.stdout.isatty() and os.environ.get("NO_COLOR") is None
+
+
+def _c(text: str, color: str, *, use_color: bool) -> str:
+    if not use_color:
         return text
     return f"{color}{text}{_RESET}"
 
 
-def _bold(text: str) -> str:
-    return _c(text, _BOLD)
+def _bold(text: str, *, use_color: bool) -> str:
+    return _c(text, _BOLD, use_color=use_color)
 
 
 def render_table(result: ScanResult) -> str:
     """Render ``result`` as a console report string."""
+    color = _use_color()
     lines: list[str] = []
-    lines.append(_bold("Endpoint & Auth Mapper — report"))
+    lines.append(_bold("Endpoint & Auth Mapper — report", use_color=color))
     lines.append(
         "CONFIDENTIAL: contains unmitigated attack surface. Do not commit or share broadly."
     )
@@ -48,13 +51,13 @@ def render_table(result: ScanResult) -> str:
     if not findings:
         lines.append("No endpoints classified. (Check rule-pack coverage for this stack.)")
     else:
-        lines.extend(_render_rows(result))
+        lines.extend(_render_rows(result, color=color))
 
     lines.append("")
-    lines.extend(_render_summary(result))
+    lines.extend(_render_summary(result, color=color))
     if result.errors:
         lines.append("")
-        lines.append(_bold(f"Scan warnings ({len(result.errors)}):"))
+        lines.append(_bold(f"Scan warnings ({len(result.errors)}):", use_color=color))
         for err in result.errors[:20]:
             lines.append(f"  ! {err.file}: {err.message}")
         if len(result.errors) > 20:
@@ -62,7 +65,7 @@ def render_table(result: ScanResult) -> str:
     return "\n".join(lines)
 
 
-def _render_rows(result: ScanResult) -> list[str]:
+def _render_rows(result: ScanResult, *, color: bool) -> list[str]:
     rows: list[tuple[str, str, str, str, str]] = []
     for f in result.sorted_findings():
         ep = f.endpoint
@@ -84,27 +87,27 @@ def _render_rows(result: ScanResult) -> list[str]:
 
     out: list[str] = []
     header_line = "  ".join(h.ljust(widths[i]) for i, h in enumerate(headers))
-    out.append(_bold(header_line))
+    out.append(_bold(header_line, use_color=color))
     out.append("  ".join("-" * widths[i] for i in range(len(headers))))
 
     for f, row in zip(result.sorted_findings(), rows):
-        color = _STATE_COLOR.get(f.auth_state, "")
+        state_color = _STATE_COLOR.get(f.auth_state, "")
         cells = [cell.ljust(widths[i]) for i, cell in enumerate(row)]
         line = "  ".join(cells)
-        out.append(_c(line, color) if color else line)
+        out.append(_c(line, state_color, use_color=color) if state_color else line)
     return out
 
 
-def _render_summary(result: ScanResult) -> list[str]:
+def _render_summary(result: ScanResult, *, color: bool) -> list[str]:
     counts = result.counts_by_state()
     parts = [
-        f"{_c('EXPOSED', _STATE_COLOR[AuthState.EXPOSED])}={counts['EXPOSED']}",
-        f"{_c('UNKNOWN', _STATE_COLOR[AuthState.UNKNOWN])}={counts['UNKNOWN']}",
-        f"{_c('PROTECTED', _STATE_COLOR[AuthState.PROTECTED])}={counts['PROTECTED']}",
-        f"{_c('PUBLIC', _STATE_COLOR[AuthState.PUBLIC])}={counts['PUBLIC']}",
+        f"{_c('EXPOSED', _STATE_COLOR[AuthState.EXPOSED], use_color=color)}={counts['EXPOSED']}",
+        f"{_c('UNKNOWN', _STATE_COLOR[AuthState.UNKNOWN], use_color=color)}={counts['UNKNOWN']}",
+        f"{_c('PROTECTED', _STATE_COLOR[AuthState.PROTECTED], use_color=color)}={counts['PROTECTED']}",
+        f"{_c('PUBLIC', _STATE_COLOR[AuthState.PUBLIC], use_color=color)}={counts['PUBLIC']}",
     ]
     summary = [
-        _bold("Summary"),
+        _bold("Summary", use_color=color),
         "  " + "  ".join(parts),
         f"  files scanned={result.files_scanned}  skipped={result.files_skipped}"
         f"  rulepacks={len(result.rulepacks_used)}  time={result.duration_seconds:.3f}s",
