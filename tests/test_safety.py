@@ -53,6 +53,44 @@ def test_read_text_skips_oversized(tmp_path: Path):
 
 def test_safe_matcher_returns_matches():
     pattern = compile_pattern(r"\d+")
-    matcher = SafeMatcher(timeout_seconds=1.0)
-    matches = matcher.finditer(pattern, "a1 b22 c333")
-    assert [m.group(0) for m in matches] == ["1", "22", "333"]
+    matcher = SafeMatcher(timeout_seconds=2.0)
+    try:
+        matches = matcher.finditer(pattern, "a1 b22 c333")
+        assert [m.group(0) for m in matches] == ["1", "22", "333"]
+    finally:
+        matcher.close()
+
+
+def test_safe_matcher_group_access():
+    """Verify MatchProxy supports positional and named group access."""
+    pattern = compile_pattern(r"(\w+)\.(?P<method>get|post)\(")
+    matcher = SafeMatcher(timeout_seconds=2.0)
+    try:
+        matches = matcher.finditer(pattern, 'app.get("/foo")')
+        assert len(matches) == 1
+        assert matches[0].group(0) == 'app.get('
+        assert matches[0].group(1) == "app"
+        assert matches[0].group("method") == "get"
+    finally:
+        matcher.close()
+
+
+def test_safe_matcher_reuse_across_calls():
+    """Worker process is reused across multiple finditer calls."""
+    pattern = compile_pattern(r"\d+")
+    matcher = SafeMatcher(timeout_seconds=2.0)
+    try:
+        r1 = matcher.finditer(pattern, "one 1 two 2")
+        r2 = matcher.finditer(pattern, "three 3")
+        assert [m.group(0) for m in r1] == ["1", "2"]
+        assert [m.group(0) for m in r2] == ["3"]
+    finally:
+        matcher.close()
+
+
+def test_safe_matcher_close_is_idempotent():
+    matcher = SafeMatcher(timeout_seconds=2.0)
+    pattern = compile_pattern(r"\d+")
+    matcher.finditer(pattern, "x1")
+    matcher.close()
+    matcher.close()  # Must not raise.

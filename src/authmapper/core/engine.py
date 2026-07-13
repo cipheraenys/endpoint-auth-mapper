@@ -27,12 +27,14 @@ from .analyzer import Analyzer
 from .regex_analyzer import RegexAnalyzer
 from .ast_analyzer import ASTAnalyzer
 
+
 @dataclass(frozen=True)
 class EngineConfig:
     """Tunable knobs for a run."""
 
     regex_timeout_seconds: float = 1.0
     max_file_bytes: int = 2 * 1024 * 1024
+    use_ast: bool = False
 
 
 class Engine:
@@ -62,16 +64,20 @@ class Engine:
         errors: list[ScanError] = []
         scanned = 0
 
-        for source in walker.walk():
-            scanned += 1
+        try:
+            for source in walker.walk():
+                scanned += 1
 
-            for pack in self._rulepacks:
-                if pack.matches_file(source.relpath):
-                    try:
-                        file_findings = self._analyze_file(source, pack)
-                        findings.extend(file_findings)
-                    except Exception as exc:
-                        errors.append(ScanError(file=source.relpath, message=f"({pack.name}): {exc}"))
+                for pack in self._rulepacks:
+                    if pack.matches_file(source.relpath):
+                        try:
+                            file_findings = self._analyze_file(source, pack)
+                            findings.extend(file_findings)
+                        except Exception as exc:
+                            errors.append(ScanError(file=source.relpath, message=f"({pack.name}): {exc}"))
+        finally:
+            # Deterministic cleanup of the worker process regardless of outcome.
+            self._matcher.close()
 
         duration = time.perf_counter() - started
         return ScanResult(
@@ -92,12 +98,11 @@ class Engine:
         return globs
 
     def _analyze_file(self, source: SourceFile, pack: RulePack) -> list[Finding]:
-        if self._ast_analyzer.is_available() and pack.ast_endpoints:
+        if self._config.use_ast and self._ast_analyzer.is_available() and pack.ast_endpoints:
             try:
                 ast_findings = self._ast_analyzer.analyze(source, pack)
                 if ast_findings:
                     return ast_findings
-            except Exception as e:
-                # Fallback to regex
-                pass
+            except Exception:
+                pass  # Fallback to regex
         return self._regex_analyzer.analyze(source, pack)
