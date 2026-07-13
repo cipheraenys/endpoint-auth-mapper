@@ -51,6 +51,7 @@ class Runner:
             EngineConfig(
                 regex_timeout_seconds=self._config.regex_timeout_seconds,
                 max_file_bytes=self._config.max_file_bytes,
+                use_ast=self._config.experimental_ast,
             ),
         )
         result = engine.scan(self._config.project_root, extra_excludes=self._config.excludes)

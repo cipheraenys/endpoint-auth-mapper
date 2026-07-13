@@ -102,6 +102,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Open the local interactive browser (Layer 2) after scanning.",
     )
     parser.add_argument(
+        "--experimental-ast",
+        action="store_true",
+        help="Enable experimental AST-based analysis (requires tree-sitter).",
+    )
+    parser.add_argument(
         "--quiet", "-q", action="store_true", help="Suppress the rendered report on stdout."
     )
     return parser
@@ -128,6 +133,7 @@ def _build_config(args: argparse.Namespace) -> RunConfig:
         regex_timeout_seconds=args.regex_timeout,
         write_report=args.output is not None,
         quiet=args.quiet,
+        experimental_ast=args.experimental_ast,
     ).merged_with_file()
 
 
