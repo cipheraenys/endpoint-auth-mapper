@@ -1,0 +1,21 @@
+# Endpoint & Auth Mapper — GitLab CI template.
+#
+# Demonstrates universal CI portability: the same CLI + exit-code contract works
+# on any runner. Include or copy the job into your .gitlab-ci.yml.
+auth-audit:
+  stage: test
+  image: python:3.11-slim
+  script:
+    - pip install ./endpoint-auth-mapper
+    # Machine-readable artifact for review.
+    - authmap --project . --format json --output authmap --report-dir .security-reports || true
+    # Gate: fail only on new exposed endpoints.
+    - authmap --project . --fail-on EXPOSED --min-confidence high --baseline .authmap-baseline.json --quiet
+  artifacts:
+    when: always
+    paths:
+      - .security-reports/authmap.json
+    expire_in: 1 week
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
