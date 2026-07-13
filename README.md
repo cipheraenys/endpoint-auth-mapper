@@ -52,7 +52,7 @@ C#/ASP.NET Core. Adding a stack is a JSON file — see
 
 ## Install
 
-Requires Python 3.9+. No third-party packages.
+Requires Python 3.10+. No third-party packages.
 
 ```bash
 # From a checkout:
