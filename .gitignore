@@ -23,6 +23,9 @@ htmlcov/
 venv/
 env/
 
+# --- Kilo agent workspace ---------------------------------------------------
+.kilo/
+
 # --- OS / editor noise ------------------------------------------------------
 .DS_Store
 Thumbs.db
