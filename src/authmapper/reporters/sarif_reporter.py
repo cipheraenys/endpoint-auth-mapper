@@ -4,16 +4,17 @@ SARIF (Static Analysis Results Interchange Format) is the standard consumed by
 GitHub code scanning, Azure DevOps, and many IDEs. Emitting it lets the tool
 plug into existing security dashboards with no glue code.
 
-Only non-suppressed, actionable findings (EXPOSED / UNKNOWN) are emitted as
-results; PROTECTED/PUBLIC endpoints are informational and omitted to keep the
-security view focused.
+Actionable findings (EXPOSED / UNKNOWN) are always emitted.  Suppressed
+findings of these states are also emitted — with a SARIF ``suppressions``
+array — so that auditors can verify suppression justifications.
+PROTECTED/PUBLIC endpoints are informational and omitted.
 """
 
 from __future__ import annotations
 
 import json
 
-from ..core.model import AuthState, ScanResult, Severity
+from ..core.model import AuthState, Finding, ScanResult, Severity
 
 _SARIF_LEVEL = {
     Severity.CRITICAL: "error",
@@ -31,7 +32,7 @@ def render_sarif(result: ScanResult) -> str:
     rules = _rules()
     results = [
         _result(f)
-        for f in result.sorted_findings()
+        for f in result.sorted_findings(include_suppressed=True)
         if f.auth_state in _REPORTABLE
     ]
 
@@ -72,11 +73,11 @@ def _rules() -> list[dict]:
     ]
 
 
-def _result(finding) -> dict:  # noqa: ANN001 - internal helper
+def _result(finding: Finding) -> dict:
     rule_id = "exposed-endpoint" if finding.auth_state is AuthState.EXPOSED else "unknown-endpoint"
     ep = finding.endpoint
     message = f"{finding.auth_state}: {ep.method} {ep.route} — {finding.rationale}"
-    return {
+    result: dict = {
         "ruleId": rule_id,
         "level": _SARIF_LEVEL[finding.severity],
         "message": {"text": message},
@@ -95,3 +96,11 @@ def _result(finding) -> dict:  # noqa: ANN001 - internal helper
             "framework": ep.framework,
         },
     }
+    if finding.suppressed:
+        result["suppressions"] = [
+            {
+                "kind": "inSource",
+                "justification": finding.suppression_reason or "unspecified",
+            }
+        ]
+    return result
