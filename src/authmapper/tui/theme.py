@@ -98,10 +98,12 @@ class Style:
     def to_ansi(self, *, color: bool = True) -> str:
         """Return the ANSI SGR sequence for this style.
 
-        When ``color`` is False the returned string contains only the reset and
-        attribute codes (bold/underline), never the color codes.
+        Always emits a reset first (``\\033[0m``) so that attributes from a
+        previous style never leak into this one.  When ``color`` is False the
+        returned string contains only the reset and attribute codes
+        (bold/underline), never the color codes.
         """
-        codes: list[str] = []
+        codes: list[str] = ["0"]  # always reset first to prevent attribute leaking
         if self.fg is not None and color:
             codes.append(_FG.get(self.fg, "39"))
         if self.bg is not None and color:
@@ -110,7 +112,7 @@ class Style:
             codes.append("1")
         if self.underline:
             codes.append("4")
-        return "\033[" + ";".join(codes) + "m" if codes else ""
+        return "\033[" + ";".join(codes) + "m"
 
 
 # Convenience reset style.
@@ -169,7 +171,7 @@ class Theme:
         # Selection uses a neon-cyan background so the active row glows. Bold
         # and underline provide a non-color cue when the background is not
         # visible (e.g. NO_COLOR or a light terminal theme).
-        self.selected = Style(fg="black", bg="cyan", bold=True, underline=True)
+        self.selected = Style(fg="black", bg="cyan", bold=True)
 
     @property
     def color(self) -> bool:

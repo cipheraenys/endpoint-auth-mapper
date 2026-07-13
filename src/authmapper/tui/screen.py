@@ -200,6 +200,9 @@ class ScreenBuffer:
                     line_chars.append(style.to_ansi(color=self._theme.color))
                     previous_style = cell.style
                 line_chars.append(cell.char)
+            # Reset at end of each row so attributes never bleed across lines.
+            line_chars.append("\033[0m")
+            previous_style = None
             out.append("".join(line_chars))
             out.append("\n")
         out.append("\033[0m")

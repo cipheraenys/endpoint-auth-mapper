@@ -64,7 +64,7 @@ def test_theme_severity_style():
 def test_theme_selected_has_non_color_cues():
     theme = Theme(color=False)
     assert theme.selected.bold is True
-    assert theme.selected.underline is True
+    assert theme.selected.underline is False  # underline removed: causes artifacts on bg-filled rows
     assert theme.selected.bg == "cyan"
 
 
