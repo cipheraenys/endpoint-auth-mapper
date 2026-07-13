@@ -79,7 +79,7 @@ class Engine:
             errors=tuple(errors),
             files_scanned=scanned,
             files_skipped=walker.skipped,
-            rulepacks_used=len(self._rulepacks),
+            rulepacks_used=tuple(p.name for p in self._rulepacks),
             duration_seconds=duration,
         )
 
