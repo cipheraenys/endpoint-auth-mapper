@@ -72,3 +72,64 @@ def test_cli_interactive_falls_back_to_table_when_not_a_tty(fixtures_dir: Path, 
     assert "rich TUI" in captured.err or "table report" in captured.err
     # The fallback table report is printed to stdout.
     assert "Endpoint & Auth Mapper" in captured.out
+
+
+# -- fail-closed input validation -------------------------------------------
+
+
+def test_cli_exit_2_on_malformed_config(tmp_path: Path):
+    cfg = tmp_path / ".authmap.json"
+    cfg.write_text("{invalid json", encoding="utf-8")
+    # Place a dummy source file so project root resolves.
+    (tmp_path / "dummy.js").write_text("// empty", encoding="utf-8")
+    code = main(["--project", str(tmp_path)])
+    assert code == 2
+
+
+def test_cli_exit_2_on_non_object_config(tmp_path: Path):
+    cfg = tmp_path / ".authmap.json"
+    cfg.write_text('"just a string"', encoding="utf-8")
+    (tmp_path / "dummy.js").write_text("// empty", encoding="utf-8")
+    code = main(["--project", str(tmp_path)])
+    assert code == 2
+
+
+def test_cli_missing_config_is_ok(fixtures_dir: Path):
+    # No .authmap.json — should run fine.
+    code = main(["--project", str(fixtures_dir / "php"), "--quiet"])
+    assert code == 0
+
+
+def test_cli_exit_2_on_malformed_baseline(fixtures_dir: Path, tmp_path: Path):
+    baseline = tmp_path / "bad-baseline.json"
+    baseline.write_text("{not valid}", encoding="utf-8")
+    code = main([
+        "--project", str(fixtures_dir / "node"),
+        "--fail-on", "EXPOSED",
+        "--baseline", str(baseline),
+        "--quiet",
+    ])
+    assert code == 2
+
+
+def test_cli_exit_2_on_non_object_baseline(fixtures_dir: Path, tmp_path: Path):
+    baseline = tmp_path / "bad-baseline.json"
+    baseline.write_text("[1, 2, 3]", encoding="utf-8")
+    code = main([
+        "--project", str(fixtures_dir / "node"),
+        "--fail-on", "EXPOSED",
+        "--baseline", str(baseline),
+        "--quiet",
+    ])
+    assert code == 2
+
+
+def test_cli_missing_baseline_is_ok(fixtures_dir: Path):
+    code = main([
+        "--project", str(fixtures_dir / "node"),
+        "--fail-on", "EXPOSED",
+        "--baseline", "/nonexistent/path/baseline.json",
+        "--quiet",
+    ])
+    # Missing baseline = empty set, so EXPOSED findings will trip the gate (exit 1)
+    assert code == 1

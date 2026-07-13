@@ -19,7 +19,7 @@ from pathlib import Path
 
 from . import __version__
 from .app.baseline import build_baseline
-from .app.config import RunConfig
+from .app.config import ConfigError, RunConfig
 from .app.runner import EXIT_ERROR, Runner, RunnerError
 from .core.walker import resolve_project_root
 
@@ -137,7 +137,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     try:
         config = _build_config(args)
-    except (FileNotFoundError, NotADirectoryError) as exc:
+    except (FileNotFoundError, NotADirectoryError, ConfigError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return EXIT_ERROR
 

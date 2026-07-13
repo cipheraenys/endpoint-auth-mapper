@@ -16,7 +16,7 @@ from ..core.model import AuthState, Finding, ScanResult, Severity
 from ..core.rulepack import RulePackError, load_rulepacks
 from ..core.safety import ensure_within
 from ..reporters import REPORTERS
-from .baseline import is_baselined, load_baseline
+from .baseline import BaselineError, is_baselined, load_baseline
 from .config import RunConfig
 
 # Process exit codes (documented contract for CI).
@@ -101,11 +101,7 @@ class Runner:
         if fail_state is None and fail_sev is None:
             return ()
 
-        accepted = (
-            load_baseline(self._config.baseline_path)
-            if self._config.baseline_path
-            else set()
-        )
+        accepted = self._load_accepted_baseline()
         min_rank = _CONFIDENCE_RANK[self._config.min_confidence]
 
         gating: list[Finding] = []
@@ -119,6 +115,20 @@ class Runner:
             if self._trips_gate(f, fail_state, fail_sev):
                 gating.append(f)
         return tuple(gating)
+
+    def _load_accepted_baseline(self) -> set[str]:
+        """Load the baseline fingerprint set, failing closed on malformed input.
+
+        A missing baseline is treated as empty (no accepted fingerprints).
+        A present but malformed baseline raises :class:`RunnerError` so the run
+        exits with code 2 rather than silently passing all gating findings.
+        """
+        if not self._config.baseline_path:
+            return set()
+        try:
+            return load_baseline(self._config.baseline_path)
+        except BaselineError as exc:
+            raise RunnerError(str(exc)) from exc
 
     @staticmethod
     def _trips_gate(
@@ -137,8 +147,9 @@ class Runner:
         return False
 
     def _exit_code(self, result: ScanResult, gating: tuple[Finding, ...]) -> int:
-        if result.errors and not result.findings:
-            # Nothing analyzed and errors present -> signal tool trouble.
+        # Scan errors mean the analysis is incomplete; a partial scan must never
+        # be treated as a clean result regardless of whether gating found nothing.
+        if result.errors:
             return EXIT_ERROR
         return EXIT_FINDINGS if gating else EXIT_OK
 
