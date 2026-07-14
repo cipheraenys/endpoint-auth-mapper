@@ -1,7 +1,7 @@
 # Contributing
 
-Project favors small,
-auditable changes and keeps a strict **zero runtime dependency** rule.
+The project favors small, auditable changes and keeps runtime dependencies
+minimal, explicit, pinned, audited, and justified.
 
 ## Development setup
 
