@@ -32,6 +32,5 @@
       "regex": "\\$_SERVER\\s*\\[\\s*['\"]PHP_AUTH_(USER|PW)",
       "scope": "file"
     }
-  ],
-  "exempt_paths": ["/health", "/ping", "/status"]
+  ]
 }

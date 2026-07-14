@@ -20,6 +20,9 @@ Organized via [Diátaxis](https://diataxis.fr/) framework. Four modes.
 - [Output states](./reference/output-states.md)
 - [Configuration files](./reference/configuration.md)
 - [Rule pack schema](./reference/rulepack-schema.md)
+- [V2 rulepack manifest](./reference/v2-rulepack-manifest.md)
+- [Evidence report v2](./reference/evidence-report-v2.md)
+- [Adapter explanation view](./reference/adapter-explanation.md)
 
 ## [Explanation](./explanation/)
 **Understanding-oriented.** Context and design rationale.

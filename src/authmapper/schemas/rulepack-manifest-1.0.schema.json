@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://authmap.dev/schemas/rulepack-manifest-1.0.json",
+  "title": "Authmap rulepack manifest 1.0",
+  "$ref": "#/$defs/manifest",
+  "$defs": {
+    "semver": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "engineRange": {
+      "type": "string",
+      "pattern": "^(?:(?:>=|>|<=|<|==)(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*))(?: (?:(?:>=|>|<=|<|==)(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)))*$"
+    },
+    "capabilities": {
+      "type": "object",
+      "properties": {
+        "endpoint_discovery": { "$ref": "#/$defs/maturity" },
+        "route_composition": { "$ref": "#/$defs/maturity" },
+        "scope_resolution": { "$ref": "#/$defs/maturity" },
+        "auth_association": { "$ref": "#/$defs/maturity" }
+      },
+      "required": ["endpoint_discovery", "route_composition", "scope_resolution", "auth_association"],
+      "unevaluatedProperties": false
+    },
+    "maturity": {
+      "enum": ["unavailable", "experimental", "verified"]
+    },
+    "applicability": {
+      "type": "object",
+      "properties": {
+        "dependency": { "type": "string", "minLength": 1 },
+        "import": { "type": "string", "minLength": 1 },
+        "runtime_marker": { "type": "string", "minLength": 1 },
+        "config": { "type": "string", "minLength": 1 }
+      },
+      "unevaluatedProperties": false
+    },
+    "manifest": {
+      "type": "object",
+      "properties": {
+        "$schema": { "const": "https://authmap.dev/schemas/rulepack-manifest-1.0.json" },
+        "$id": { "type": "string", "format": "uri", "pattern": "^https://" },
+        "id": { "type": "string", "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)+$" },
+        "version": { "$ref": "#/$defs/semver" },
+        "engine": { "$ref": "#/$defs/engineRange" },
+        "languages": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "runtimes": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "framework": { "type": ["string", "null"], "pattern": "^[a-z][a-z0-9_-]*$" },
+        "lifecycle": { "enum": ["draft", "active", "deprecated", "retired"] },
+        "capabilities": { "$ref": "#/$defs/capabilities" },
+        "applicability": { "$ref": "#/$defs/applicability" },
+        "collision_group": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+        "entrypoint": { "type": "string", "pattern": "^(?:builtin|python):[A-Za-z0-9_.-]+$" }
+      },
+      "required": [
+        "$schema", "$id", "id", "version", "engine", "languages", "runtimes",
+        "framework", "lifecycle", "capabilities", "applicability", "collision_group", "entrypoint"
+      ],
+      "unevaluatedProperties": false
+    }
+  }
+}

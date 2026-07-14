@@ -27,6 +27,5 @@
       "regex": "SecurityContextHolder\\.getContext\\(\\)",
       "scope": "file"
     }
-  ],
-  "exempt_paths": ["/health", "/actuator/health", "/ping", "/metrics", "/status"]
+  ]
 }

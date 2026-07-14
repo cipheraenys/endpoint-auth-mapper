@@ -1,0 +1,20 @@
+{
+  "$schema": "https://authmap.dev/schemas/rulepack-manifest-1.0.json",
+  "$id": "https://authmap.dev/packs/js-hono/2.0.0/manifest.json",
+  "id": "org.authmap.js-hono",
+  "version": "2.0.0",
+  "engine": ">=0.1.0 <0.2.0",
+  "languages": ["javascript"],
+  "runtimes": ["node"],
+  "framework": "hono",
+  "lifecycle": "active",
+  "capabilities": {
+    "endpoint_discovery": "stable",
+    "route_composition": "experimental",
+    "scope_resolution": "experimental",
+    "auth_association": "experimental"
+  },
+  "applicability": { "dependency": "hono" },
+  "collision_group": "js-call-router",
+  "entrypoint": "builtin:js-hono-v2"
+}

@@ -13,6 +13,7 @@ Exit codes (CI contract):
 from __future__ import annotations
 
 import argparse
+import math
 import sys
 from collections.abc import Sequence
 from pathlib import Path
@@ -24,13 +25,21 @@ from .app.runner import EXIT_ERROR, Runner, RunnerError
 from .core.walker import resolve_project_root
 
 _DEFAULT_REPORT_DIR = ".security-reports"
+_FAIL_ON_VALUES = ("EXPOSED", "UNKNOWN", "CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO")
+
+
+def _positive_float(value: str) -> float:
+    parsed = float(value)
+    if not math.isfinite(parsed) or parsed <= 0:
+        raise argparse.ArgumentTypeError("must be a finite number greater than zero")
+    return parsed
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="authmap",
         description=(
-            "Universal, offline static analyzer that maps HTTP endpoints and "
+            "Offline static analyzer that maps candidate HTTP endpoints and "
             "classifies their authentication posture (PROTECTED/EXPOSED/UNKNOWN/PUBLIC). "
             "Run only on code you own or are authorized to audit."
         ),
@@ -58,20 +67,21 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--fail-on",
+        choices=_FAIL_ON_VALUES,
         default=None,
         metavar="LEVEL",
         help="Exit non-zero when findings at/above LEVEL exist "
-        "(EXPOSED, UNKNOWN, or a severity: CRITICAL/HIGH/MEDIUM/LOW).",
+        "(EXPOSED, UNKNOWN, or a severity: CRITICAL/HIGH/MEDIUM/LOW/INFO).",
     )
     parser.add_argument(
         "--min-confidence",
         choices=("low", "medium", "high"),
-        default="medium",
+        default=None,
         help="Minimum confidence for a finding to count toward --fail-on (default: medium).",
     )
     parser.add_argument(
         "--exclude",
-        default="",
+        default=None,
         help="Comma-separated directory names to exclude in addition to defaults.",
     )
     parser.add_argument(
@@ -92,7 +102,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--regex-timeout",
-        type=float,
+        type=_positive_float,
         default=1.0,
         help="Per-regex wall-clock budget in seconds (ReDoS guard, default: 1.0).",
     )
@@ -104,7 +114,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--experimental-ast",
         action="store_true",
+        default=None,
         help="Enable experimental AST-based analysis (requires tree-sitter).",
+    )
+    parser.add_argument(
+        "--strict-coverage",
+        action="store_true",
+        default=None,
+        help="Exit 2 when eligible source is unsupported, skipped, or errors.",
     )
     parser.add_argument(
         "--quiet", "-q", action="store_true", help="Suppress the rendered report on stdout."
@@ -120,26 +137,56 @@ def _build_config(args: argparse.Namespace) -> RunConfig:
     root = resolve_project_root(args.project)
     report_dir = (root / args.report_dir).resolve()
     extra_dirs = tuple(Path(p).expanduser().resolve() for p in _split_csv(args.rulepacks))
+    cli_overrides = frozenset(
+        field_name
+        for field_name, value in (
+            ("excludes", args.exclude),
+            ("experimental_ast", args.experimental_ast),
+            ("fail_on", args.fail_on),
+            ("min_confidence", args.min_confidence),
+            ("strict_coverage", args.strict_coverage),
+        )
+        if value is not None
+    )
     return RunConfig(
         project_root=root,
         report_dir=report_dir,
         output_stem=args.output or "authmap",
         output_format=args.format,
         fail_on=args.fail_on,
-        min_confidence=args.min_confidence,
-        excludes=_split_csv(args.exclude),
+        min_confidence=args.min_confidence or "medium",
+        excludes=_split_csv(args.exclude or ""),
         extra_rulepack_dirs=extra_dirs,
         baseline_path=Path(args.baseline).expanduser().resolve() if args.baseline else None,
         regex_timeout_seconds=args.regex_timeout,
         write_report=args.output is not None,
         quiet=args.quiet,
-        experimental_ast=args.experimental_ast,
+        experimental_ast=bool(args.experimental_ast),
+        strict_coverage=bool(args.strict_coverage),
+        cli_overrides=cli_overrides,
     ).merged_with_file()
+
+
+def _validate_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
+    if args.write_baseline is None:
+        return
+    conflicts = [
+        option
+        for option, active in (
+            ("--baseline", args.baseline is not None),
+            ("--fail-on", args.fail_on is not None),
+            ("--interactive", bool(args.interactive)),
+        )
+        if active
+    ]
+    if conflicts:
+        parser.error(f"--write-baseline cannot be combined with {', '.join(conflicts)}")
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    _validate_args(parser, args)
 
     try:
         config = _build_config(args)
@@ -156,8 +203,19 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     # Optional: write a baseline snapshot and exit cleanly.
     if args.write_baseline:
+        if outcome.result.incomplete_coverage():
+            print(
+                "authmap: error: refusing to write a baseline from incomplete coverage",
+                file=sys.stderr,
+            )
+            return EXIT_ERROR
         baseline_doc = build_baseline(outcome.result.sorted_findings())
-        Path(args.write_baseline).write_text(baseline_doc, encoding="utf-8")
+        baseline_path = Path(args.write_baseline).expanduser().resolve()
+        try:
+            baseline_path.write_text(baseline_doc, encoding="utf-8")
+        except OSError as exc:
+            print(f"authmap: error: could not write baseline '{baseline_path}': {exc}", file=sys.stderr)
+            return EXIT_ERROR
         print(f"baseline written: {args.write_baseline}", file=sys.stderr)
         return 0
 

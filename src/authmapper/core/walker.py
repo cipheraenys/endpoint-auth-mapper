@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
+from .model import CoverageStatus, SourceCoverage
 from .safety import DEFAULT_MAX_FILE_BYTES, read_text_safely
 
 
@@ -82,6 +83,30 @@ DEFAULT_EXCLUDES: tuple[str, ...] = (
     "obj",
 )
 
+# Broader than bundled pack support so relevant unsupported source stays visible.
+ELIGIBLE_SOURCE_SUFFIXES = frozenset(
+    {
+        ".c",
+        ".cc",
+        ".cpp",
+        ".cs",
+        ".go",
+        ".java",
+        ".js",
+        ".jsx",
+        ".kt",
+        ".kts",
+        ".mjs",
+        ".cjs",
+        ".php",
+        ".py",
+        ".rb",
+        ".rs",
+        ".ts",
+        ".tsx",
+    }
+)
+
 IGNORE_FILENAME = ".authmapignore"
 
 
@@ -113,6 +138,7 @@ class FileWalker:
 
         # Running counters for the summary; the walker owns discovery stats.
         self.skipped = 0
+        self.coverage: list[SourceCoverage] = []
 
     # -- public API ----------------------------------------------------------
 
@@ -120,13 +146,38 @@ class FileWalker:
         """Yield decoded :class:`SourceFile` objects for matching files."""
         for path in self._iter_candidate_paths():
             rel = self._relpath(path)
-            if not self._matches_includes(rel):
+            supported = self._matches_includes(rel)
+            if path.suffix.lower() not in ELIGIBLE_SOURCE_SUFFIXES and not supported:
                 continue
             if self._is_ignored(rel):
+                self.coverage.append(
+                    SourceCoverage(
+                        file=rel,
+                        status=CoverageStatus.EXCLUDED,
+                        reason="matched project exclusion policy",
+                    )
+                )
+                self.skipped += 1
+                continue
+            if not supported:
+                self.coverage.append(
+                    SourceCoverage(
+                        file=rel,
+                        status=CoverageStatus.UNSUPPORTED,
+                        reason=f"no loaded rule pack supports {path.suffix.lower()}",
+                    )
+                )
                 self.skipped += 1
                 continue
             text = read_text_safely(path, max_bytes=self._max_file_bytes)
             if text is None:
+                self.coverage.append(
+                    SourceCoverage(
+                        file=rel,
+                        status=CoverageStatus.SKIPPED,
+                        reason="safety/read guard rejected binary, oversized, undecodable, or unreadable source",
+                    )
+                )
                 self.skipped += 1
                 continue
             yield SourceFile(path=path, relpath=rel, text=text)
@@ -144,8 +195,6 @@ class FileWalker:
                 continue
             for entry in entries:
                 if entry.is_dir():
-                    if entry.name in self._exclude_dirs:
-                        continue
                     stack.append(entry)
                 elif entry.is_file():
                     yield entry
@@ -157,7 +206,9 @@ class FileWalker:
         return any(glob_match(rel, pat) for pat in self._include_globs)
 
     def _is_ignored(self, rel: str) -> bool:
-        return any(glob_match(rel, pat) for pat in self._ignore_patterns)
+        return bool(set(Path(rel).parts) & self._exclude_dirs) or any(
+            glob_match(rel, pat) for pat in self._ignore_patterns
+        )
 
     def _load_ignore_file(self) -> tuple[str, ...]:
         ignore_path = self._root / IGNORE_FILENAME

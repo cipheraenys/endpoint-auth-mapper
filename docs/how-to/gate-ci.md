@@ -17,7 +17,7 @@ jobs:
       - name: Install Endpoint & Auth Mapper
         run: pip install ./endpoint-auth-mapper
       - name: Run Scan
-        run: authmap --project . --fail-on EXPOSED --min-confidence high
+        run: authmap --project . --fail-on EXPOSED --min-confidence high --strict-coverage
 ```
 
 ## 2. GitLab CI
@@ -30,10 +30,12 @@ authmap:
   image: python:3.12
   script:
     - pip install ./endpoint-auth-mapper
-    - authmap --project . --fail-on EXPOSED --min-confidence high
+    - authmap --project . --fail-on EXPOSED --min-confidence high --strict-coverage
 ```
 
 ## Flags Details
 
 - `--fail-on EXPOSED`: Fails pipeline (exit code 1) if any EXPOSED endpoints exist.
 - `--min-confidence high`: Skips low or medium confidence detections to reduce false positives in CI blocks.
+- `--strict-coverage`: Fails pipeline (exit code 2) if eligible source is
+  unsupported, skipped by a safety/read guard, or fails analysis.

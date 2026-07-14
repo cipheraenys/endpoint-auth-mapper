@@ -1,7 +1,7 @@
 # Contributing
 
-Project favors small,
-auditable changes and keeps a strict **zero runtime dependency** rule.
+The project favors small, auditable changes and keeps runtime dependencies
+minimal, explicit, pinned, audited, and justified.
 
 ## Development setup
 
@@ -26,8 +26,9 @@ mypy src          # type-check
 
 ## Project conventions
 
-- **Runtime code uses the standard library only.** Anything else belongs under
-  the dev optional dependencies and must not be imported by src/authmapper.
+- **Runtime dependencies must be explicit, pinned, audited, and justified.**
+  Development-only tooling belongs under dev optional dependencies and must not
+  be imported by `src/authmapper`.
 - **Core stays pure.** `core/` must not import from `reporters/`, `app/`,
   `cli`, or `tui/`. Dependencies point downward only (see
   [docs/explanation/architecture.md](./docs/explanation/architecture.md)).

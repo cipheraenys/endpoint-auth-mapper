@@ -14,7 +14,9 @@ from __future__ import annotations
 
 import json
 
-from ..core.model import AuthState, Finding, ScanResult, Severity
+from authmapper import __version__
+
+from ..core.model import AuthState, CoverageStatus, Finding, ScanResult, Severity, SourceCoverage
 
 _SARIF_LEVEL = {
     Severity.CRITICAL: "error",
@@ -35,6 +37,7 @@ def render_sarif(result: ScanResult) -> str:
         for f in result.sorted_findings(include_suppressed=True)
         if f.auth_state in _REPORTABLE
     ]
+    results.extend(_coverage_result(record) for record in result.incomplete_coverage())
 
     document = {
         "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
@@ -44,8 +47,8 @@ def render_sarif(result: ScanResult) -> str:
                 "tool": {
                     "driver": {
                         "name": "endpoint-auth-mapper",
-                        "informationUri": "https://example.invalid/endpoint-auth-mapper",
-                        "version": "0.1.0",
+                        "informationUri": "https://github.com/cipheraenys/endpoint-auth-mapper",
+                        "version": __version__,
                         "rules": rules,
                     }
                 },
@@ -62,13 +65,19 @@ def _rules() -> list[dict]:
             "id": "exposed-endpoint",
             "name": "ExposedEndpoint",
             "shortDescription": {"text": "Endpoint has no detected authentication guard."},
-            "helpUri": "https://example.invalid/endpoint-auth-mapper/docs/USAGE.md",
+            "helpUri": "https://github.com/cipheraenys/endpoint-auth-mapper/blob/main/docs/reference/output-states.md",
         },
         {
             "id": "unknown-endpoint",
             "name": "UnknownEndpointAuth",
             "shortDescription": {"text": "Endpoint authentication could not be resolved."},
-            "helpUri": "https://example.invalid/endpoint-auth-mapper/docs/USAGE.md",
+            "helpUri": "https://github.com/cipheraenys/endpoint-auth-mapper/blob/main/docs/reference/output-states.md",
+        },
+        {
+            "id": "source-coverage",
+            "name": "IncompleteSourceCoverage",
+            "shortDescription": {"text": "Eligible source was not fully analyzed."},
+            "helpUri": "https://github.com/cipheraenys/endpoint-auth-mapper/blob/main/docs/reference/configuration.md#source-coverage",
         },
     ]
 
@@ -104,3 +113,22 @@ def _result(finding: Finding) -> dict:
             }
         ]
     return result
+
+
+def _coverage_result(record: SourceCoverage) -> dict:
+    return {
+        "ruleId": "source-coverage",
+        "level": "error" if record.status is CoverageStatus.ERROR else "warning",
+        "message": {"text": f"{record.status}: {record.reason}"},
+        "locations": [
+            {
+                "physicalLocation": {
+                    "artifactLocation": {"uri": record.file},
+                }
+            }
+        ],
+        "properties": {
+            "coverageStatus": str(record.status),
+            "rulepacks": list(record.rulepacks),
+        },
+    }

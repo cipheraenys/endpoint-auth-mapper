@@ -14,11 +14,6 @@ from __future__ import annotations
 
 from .model import AuthState, Confidence, Severity
 
-#: Path prefixes that indicate deliberately public infrastructure endpoints.
-#: Matching uses path-segment boundaries: ``/health`` matches ``/health`` and
-#: ``/health/live`` but NOT ``/healthcare``.
-_PUBLIC_HINTS = ("/health", "/healthz", "/ping", "/status", "/metrics", "/livez", "/readyz")
-
 
 def _normalize_route(route: str) -> str:
     """Lowercase, strip query string and trailing slash for comparison."""
@@ -36,16 +31,13 @@ def _is_segment_match(route: str, prefix: str) -> bool:
 
 
 def looks_public(route: str, exempt_paths: tuple[str, ...]) -> bool:
-    """Decide whether a route is intentionally public.
+    """Return whether a route matches an explicit rule-pack declaration.
 
-    Matching uses exact or path-segment-descendant comparison to avoid
+    Route names are never public hints. Exact segment comparison avoids
     false positives (e.g. ``/healthcare`` must NOT match ``/health``).
     """
     normalized = _normalize_route(route)
-    for p in exempt_paths:
-        if _is_segment_match(normalized, p):
-            return True
-    return any(_is_segment_match(normalized, hint) for hint in _PUBLIC_HINTS)
+    return any(_is_segment_match(normalized, path) for path in exempt_paths)
 
 
 def classify_state(

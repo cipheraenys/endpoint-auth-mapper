@@ -46,4 +46,4 @@ jobs:
       - name: Enforce auth gate
         run: |
           authmap --project . --fail-on EXPOSED --min-confidence high \
-                  --baseline .authmap-baseline.json --quiet
+                  --strict-coverage --baseline .authmap-baseline.json --quiet

@@ -4,6 +4,27 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Strict, versioned project-config validation and explicit `public_paths` policy.
+- Source coverage records in JSON, SARIF, table, and TUI summaries.
+- `--strict-coverage` for CI assurance runs.
+- Additive evidence report `2.0` schema, deterministic serializer, semantic
+  fingerprints, SARIF mapping, and labeled legacy compatibility artifact.
+- Internal adapter explanation view and generic cross-framework contract
+  challenge fixtures; no production framework capability promotion.
+
+### Changed
+- File-wide auth signals no longer prove any bundled endpoint protected.
+- Experimental AST findings are advisory and cannot block CI.
+- JSON output schema is `1.1` with coverage fields.
+
+### Fixed
+- Project config and baseline artifacts can be committed intentionally.
+- Missing or malformed configured baselines fail closed.
+- Baseline writing refuses incomplete scans.
+
 ## [0.1.2] - 2026-07-14
 
 ### Added

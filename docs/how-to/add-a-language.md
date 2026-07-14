@@ -1,6 +1,8 @@
 ﻿# Add a new language
 
-Endpoint & Auth Mapper uses JSON rule packs for language detection. Engine logic remains language-agnostic. 
+Endpoint & Auth Mapper uses JSON rule packs for candidate discovery and auth-signal
+recognition. A custom pack can add syntax inventory without engine changes, but
+does not become verified framework protection support.
 
 ## 1. Define rule pack
 
@@ -12,7 +14,9 @@ Follow `docs/reference/rulepack-schema.md` for pattern specifications.
 **Constraints:**
 * **Regex execution:** No nested quantifiers (`(a+)+`). Engine aborts on slow regex execution to block ReDoS.
 * **Escaping:** JSON requires double backslash (`\\s` for whitespace, `\\(` for parenthesis).
-* **Precision:** Broad auth guard patterns misclassify EXPOSED endpoints as PROTECTED. Write strict patterns.
+* **Association:** Only `same_line` auth signals can produce `PROTECTED` in the
+  current route model. File-wide signals remain unassociated evidence.
+* **Precision:** Broad auth guard patterns create noise. Write strict patterns.
 
 ## 2. Add test fixtures
 
@@ -24,7 +28,8 @@ Required files:
 ## 3. Add Golden Assertion
 
 File: `tests/test_engine_integration.py`
-Add test function asserting engine output on new fixtures against expected EXPOSED or PROTECTED counts.
+Add tests for candidate discovery, coverage status, and supported route-local
+association. Do not claim global/group auth or bypass support from regex presence.
 
 ## 4. Validate
 

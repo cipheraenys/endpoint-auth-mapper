@@ -10,7 +10,7 @@ import json
 
 from ..core.model import ScanResult
 
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION = "1.1"
 
 
 def render_json(result: ScanResult) -> str:

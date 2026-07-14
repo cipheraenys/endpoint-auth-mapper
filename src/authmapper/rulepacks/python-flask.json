@@ -23,6 +23,5 @@
       "regex": "\\b(current_user\\.is_authenticated|verify_jwt_in_request|g\\.user)\\b",
       "scope": "file"
     }
-  ],
-  "exempt_paths": ["/health", "/healthz", "/ping", "/metrics", "/status"]
+  ]
 }

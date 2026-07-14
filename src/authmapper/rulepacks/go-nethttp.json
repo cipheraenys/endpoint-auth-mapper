@@ -28,6 +28,5 @@
       "regex": "\\b(?:r|router|group|g)\\.Use\\s*\\([^)]*\\b(Auth|JWT|Authenticate)\\b",
       "scope": "file"
     }
-  ],
-  "exempt_paths": ["/health", "/healthz", "/ping", "/metrics", "/status"]
+  ]
 }

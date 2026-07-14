@@ -29,9 +29,9 @@ def test_public_short_circuits():
     assert state is AuthState.PUBLIC
 
 
-def test_looks_public_matches_health_and_exempt():
-    assert looks_public("/health", ())
-    assert looks_public("/status/live", ())
+def test_looks_public_requires_explicit_declaration():
+    assert not looks_public("/health", ())
+    assert not looks_public("/status/live", ())
     assert looks_public("/custom", ("/custom",))
     assert not looks_public("/api/admin", ())
 
@@ -55,19 +55,19 @@ def test_looks_public_rejects_prefix_overlap():
 
 def test_looks_public_accepts_nested():
     """/health/live is a descendant of /health and should match."""
-    assert looks_public("/health/live", ())
-    assert looks_public("/status/ready", ())
-    assert looks_public("/metrics/prometheus", ())
+    assert looks_public("/health/live", ("/health",))
+    assert looks_public("/status/ready", ("/status",))
+    assert looks_public("/metrics/prometheus", ("/metrics",))
 
 
 def test_looks_public_normalizes_trailing_slash():
-    assert looks_public("/health/", ())
-    assert looks_public("/status/", ())
+    assert looks_public("/health/", ("/health",))
+    assert looks_public("/status/", ("/status",))
 
 
 def test_looks_public_normalizes_query_string():
-    assert looks_public("/health?v=1", ())
-    assert looks_public("/ping?timeout=5", ())
+    assert looks_public("/health?v=1", ("/health",))
+    assert looks_public("/ping?timeout=5", ("/ping",))
 
 
 def test_looks_public_exempt_segment_boundary():

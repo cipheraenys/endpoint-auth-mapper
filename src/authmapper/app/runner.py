@@ -52,6 +52,7 @@ class Runner:
                 regex_timeout_seconds=self._config.regex_timeout_seconds,
                 max_file_bytes=self._config.max_file_bytes,
                 use_ast=self._config.experimental_ast,
+                public_paths=self._config.public_paths,
             ),
         )
         result = engine.scan(self._config.project_root, extra_excludes=self._config.excludes)
@@ -87,16 +88,23 @@ class Runner:
         if not self._config.write_report:
             return None
         report_dir = self._config.report_dir
-        report_dir.mkdir(parents=True, exist_ok=True)
-        ext = {"table": "txt", "json": "json", "sarif": "sarif"}[self._config.output_format]
-        target = ensure_within(report_dir, Path(f"{self._config.output_stem}.{ext}"))
-        target.write_text(rendered, encoding="utf-8")
+        try:
+            report_dir.mkdir(parents=True, exist_ok=True)
+            ext = {"table": "txt", "json": "json", "sarif": "sarif"}[
+                self._config.output_format
+            ]
+            target = ensure_within(report_dir, Path(f"{self._config.output_stem}.{ext}"))
+            target.write_text(rendered, encoding="utf-8")
+        except OSError as exc:
+            raise RunnerError(f"could not write report: {exc}") from exc
         return target
 
     # -- gating logic --------------------------------------------------------
 
     def _gating_findings(self, result: ScanResult) -> tuple[Finding, ...]:
         """Return findings that should count toward failing the run."""
+        if self._config.experimental_ast:
+            return ()
         fail_state = self._config.fail_state()
         fail_sev = self._config.fail_severity()
         if fail_state is None and fail_sev is None:
@@ -150,7 +158,9 @@ class Runner:
     def _exit_code(self, result: ScanResult, gating: tuple[Finding, ...]) -> int:
         # Scan errors mean the analysis is incomplete; a partial scan must never
         # be treated as a clean result regardless of whether gating found nothing.
-        if result.errors:
+        if result.errors or result.coverage_errors():
+            return EXIT_ERROR
+        if self._config.strict_coverage and result.incomplete_coverage():
             return EXIT_ERROR
         return EXIT_FINDINGS if gating else EXIT_OK
 

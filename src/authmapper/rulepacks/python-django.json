@@ -28,6 +28,5 @@
       "regex": "LoginRequiredMixin",
       "scope": "file"
     }
-  ],
-  "exempt_paths": ["/health", "/healthz", "/ping", "/metrics", "/status"]
+  ]
 }
