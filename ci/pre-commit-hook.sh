@@ -24,6 +24,7 @@ echo "[auth-audit] scanning for newly exposed endpoints..."
   --project "${PROJECT_ROOT}" \
   --fail-on EXPOSED \
   --min-confidence high \
+  --strict-coverage \
   --baseline "${PROJECT_ROOT}/.authmap-baseline.json" \
   --quiet
 

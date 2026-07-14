@@ -28,7 +28,7 @@ Endpoint & Auth Mapper is a **modular monolith**: a single installable unit with
 project path
    │
    ▼
-walker.FileWalker ───► decoded SourceFile stream
+walker.FileWalker ───► decoded SourceFile stream + coverage records
    │                    (size/binary/ignore filtered)
    ▼
 engine.Engine
@@ -37,7 +37,7 @@ engine.Engine
    └─ classifier (fail-safe state + severity)
    │
    ▼
-model.ScanResult (Findings, errors, summary)
+model.ScanResult (Findings, coverage, errors, summary)
    │
    ├─► reporters.* ───► rendered string
    └─► app.runner  ───► gating + exit code + confidential report file
@@ -49,14 +49,14 @@ model.ScanResult (Findings, errors, summary)
 
 - **`model.py`** — Immutable value objects (`Endpoint`, `Finding`, `AuthState`, `Confidence`, `Severity`, `ScanResult`). The shared vocabulary of every layer.
 - **`safety.py`** — Cross-cutting safety primitives: bounded/encoding-aware file reads, ReDoS-bounded matching, secret redaction, and output-path confinement.
-- **`walker.py`** — File discovery with `**`-aware globbing, ignore-file and exclude support, and per-file guards. Yields decoded text; performs no analysis.
+- **`walker.py`** — Eligible-file discovery with `**`-aware globbing, ignore/exclude accounting, and per-file guards. Yields decoded text and coverage outcomes; performs no auth analysis.
 - **`rulepack.py`** — Loads, validates, and compiles JSON rule packs into typed `RulePack` objects. The boundary between on-disk data and the engine.
 - **`classifier.py`** — The pure decision policy. Contains the fail-safe rule: `EXPOSED` requires high confidence, otherwise it resolves to `UNKNOWN`.
 - **`engine.py`** — The orchestrator that applies rule packs to files and emits findings. Mechanical "how"; the policy "meaning" lives in `classifier`.
 
 ### Data
 
-- **`rulepacks/*.json`** — One file per language/framework describing how to find endpoints and recognize auth guards. The universal layer: new language = new file, zero engine changes.
+- **`rulepacks/*.json`** — Declarative candidate discovery and auth-signal recognition. New syntax may fit a new pack; verified framework semantics usually require an adapter.
 
 ### Presentation
 

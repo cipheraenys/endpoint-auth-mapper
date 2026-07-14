@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "endpoint-auth-mapper"
 version = "0.1.2"
-description = "Universal, offline static analyzer mapping HTTP endpoints and classifying authentication posture."
+description = "Offline static analyzer mapping candidate HTTP endpoints and authentication posture."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }

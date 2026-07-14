@@ -5,7 +5,7 @@
 ![License](https://img.shields.io/github/license/cipheraenys/endpoint-auth-mapper)
 ![Version](https://img.shields.io/github/v/tag/cipheraenys/endpoint-auth-mapper?label=version)
 
-A universal, offline, dependency-free static analyzer that maps HTTP endpoints
+A local, offline, dependency-free static analyzer that maps candidate HTTP endpoints
 across languages and classifies each one's **authentication posture** as
 `PROTECTED`, `EXPOSED`, `UNKNOWN`, or `PUBLIC`.
 
@@ -23,7 +23,7 @@ It answers one question fast, in any codebase you own:
 
 - [Why it exists](#why-it-exists)
 - [Design guarantees](#design-guarantees)
-- [Supported stacks](#supported-stacks-bundled-rule-packs)
+- [Bundled rule-pack capabilities](#bundled-rule-pack-capabilities)
 - [Install](#install)
 - [Quick start](#quick-start)
 - [The three layers](#the-three-layers)
@@ -51,34 +51,36 @@ CI-friendly way to catch them **before deployment**.
 | Guarantee | How it is enforced |
 |---|---|
 | **Source-gated** | Analyzes source you already possess. No network, no URLs, no live probing. |
-| **Fail-safe** | Ambiguity resolves to `UNKNOWN`, never `PROTECTED`. |
+| **Fail-safe** | Unassociated auth signals resolve to `UNKNOWN`, never `PROTECTED`. |
 | **Read-only** | Target code is parsed as text, never imported or executed. |
 | **Zero-dependency** | Python standard library only at runtime. |
 | **Confidential output** | Reports are written to a gitignored directory; secrets are redacted. |
 | **Deterministic** | Sorted, stable output suitable for CI diffing and baselines. |
-| **Universal** | Language knowledge lives in JSON rule packs; the engine is language-agnostic. |
+| **Coverage-aware** | Every eligible source is reported as analyzed, excluded, unsupported, skipped, or error. |
 
 See [`SECURITY.md`](./SECURITY.md) for the full dual-use statement and threat model.
 
 </details>
 
-## Supported stacks (bundled rule packs)
+## Bundled rule-pack capabilities
 
-<details>
-<summary>PHP, Node, Python, Java, Go, Ruby, C# — click to expand</summary>
+Bundled regex packs provide candidate endpoint discovery, not verified framework
+protection support. Capabilities differ:
 
-- **PHP** — native/session
-- **Node/Express**
-- **Python** — Flask, Django (+DRF)
-- **Java/Kotlin** — Spring
-- **Go** — net/http, chi, gin, mux
-- **Ruby** — Rails, Sinatra
-- **C#** — ASP.NET Core
+| Pack | Candidate discovery | Route-local auth association | Global/group auth | Bypass/anonymous |
+|---|---|---|---|---|
+| PHP native/session | File-level only | Not resolved | Detected as unassociated evidence | Not resolved |
+| Node/Express | Route declarations | Same-line middleware only | Detected as unassociated evidence | Not resolved |
+| Python Flask/Django | Route declarations | Not resolved | Detected as unassociated evidence | Not resolved |
+| Java/Kotlin Spring | Route declarations | Same-line parameter signals only | Detected as unassociated evidence | Not resolved |
+| Go net/http-style | Route declarations | Same-line middleware only | Detected as unassociated evidence | Not resolved |
+| Ruby Rails/Sinatra | Route declarations | Not resolved | Detected as unassociated evidence | Not resolved |
+| C# ASP.NET Core | Route declarations | Same-line fluent calls only | Detected as unassociated evidence | Not resolved |
 
-Adding a stack is a JSON file — see
+An unassociated file-wide auth token cannot produce `PROTECTED`; affected routes
+resolve conservatively. Runtime/framework applicability and cross-file route
+composition are not proved by these packs. See
 [Rule pack schema](./docs/reference/rulepack-schema.md).
-
-</details>
 
 ---
 
@@ -109,9 +111,9 @@ authmap --project . --format sarif --output authmap
 # Interactive terminal UI (Layer 2)
 authmap --project . --interactive
 
-# CI gate: exit non-zero on new high-confidence exposed endpoints
+# CI assurance gate: fail on exposed endpoints or incomplete source coverage
 authmap --project . --fail-on EXPOSED --min-confidence high \
-        --baseline .authmap-baseline.json --quiet
+        --strict-coverage --baseline .authmap-baseline.json --quiet
 ```
 
 ## The three layers
@@ -133,7 +135,7 @@ authmap --project . --fail-on EXPOSED --min-confidence high \
 |---|---|
 | `0` | No findings at or above `--fail-on` |
 | `1` | Gating findings present |
-| `2` | Tool/setup error |
+| `2` | Tool/setup error, analysis error, or strict-coverage violation |
 
 </details>
 
@@ -143,7 +145,7 @@ authmap --project . --fail-on EXPOSED --min-confidence high \
 flowchart TD
     A[Discover endpoints via rule pack] --> B{Auth guard found?}
     B -->|Yes| C["🟢 PROTECTED"]
-    B -->|No| D{Public / health path?}
+    B -->|No| D{Explicit public declaration?}
     D -->|Yes| E["🔵 PUBLIC"]
     D -->|No| F{High confidence?}
     F -->|Yes| G["🔴 EXPOSED"]

@@ -10,7 +10,7 @@ auth-audit:
     # Machine-readable artifact for review.
     - authmap --project . --format json --output authmap --report-dir .security-reports || true
     # Gate: fail only on new exposed endpoints.
-    - authmap --project . --fail-on EXPOSED --min-confidence high --baseline .authmap-baseline.json --quiet
+    - authmap --project . --fail-on EXPOSED --min-confidence high --strict-coverage --baseline .authmap-baseline.json --quiet
   artifacts:
     when: always
     paths:

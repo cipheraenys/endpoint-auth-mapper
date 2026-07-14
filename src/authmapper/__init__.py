@@ -1,6 +1,6 @@
 """Endpoint & Auth Mapper.
 
-A universal, offline, dependency-free static analyzer that maps HTTP endpoints
+A local, offline, dependency-free static analyzer that maps candidate HTTP endpoints
 across languages and classifies their authentication posture as one of:
 PROTECTED, EXPOSED, UNKNOWN, or PUBLIC.
 
