@@ -4,6 +4,28 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] - 2026-07-14
+
+### Added
+- CI pipeline with Python 3.10–3.13 test matrix.
+- Experimental `--experimental-ast` flag for opt-in AST-based analysis.
+
+### Changed
+- Replace thread-based regex timeout with process isolation.
+- Evaluate color support at render time instead of import time.
+- Raise minimum Python version to 3.10.
+- Fix all ruff findings; set line-length to 120.
+
+### Fixed
+- Include suppressed findings in SARIF output with `suppressions` array.
+- Use path-segment boundaries for PUBLIC classification.
+- Fail closed on malformed config, baseline, and scan errors.
+- Resolve ANSI attribute leaking and selection row artifacts in TUI.
+- Pass tuple of rulepack names for `rulepacks_used`.
+
+### Removed
+- Unused development script and local tooling artifacts.
+
 ## [0.1.1] - 2026-07-13
 
 ### Added
@@ -39,4 +61,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Documentation: README, SECURITY (dual-use statement), ARCHITECTURE,
   RULEPACK_SCHEMA, USAGE, and CONTRIBUTING.
 
-[0.1.0]: https://example.invalid/endpoint-auth-mapper/releases/tag/v0.1.0
+[0.1.2]: https://github.com/cipheraenys/endpoint-auth-mapper/releases/tag/v0.1.2
+[0.1.1]: https://github.com/cipheraenys/endpoint-auth-mapper/releases/tag/v0.1.1
+[0.1.0]: https://github.com/cipheraenys/endpoint-auth-mapper/releases/tag/v0.1.0
