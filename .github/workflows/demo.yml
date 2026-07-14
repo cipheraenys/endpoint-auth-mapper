@@ -24,10 +24,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg xvfb
           go install github.com/charmbracelet/vhs@latest
+          go install github.com/tsl0922/ttyd@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Record demo GIF
-        run: xvfb-run vhs docs/assets/demo.tape
+        run: xvfb-run --auto-servernum vhs docs/assets/demo.tape
 
       - name: Upload GIF artifact
         uses: actions/upload-artifact@v4
