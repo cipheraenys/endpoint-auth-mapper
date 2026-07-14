@@ -100,7 +100,7 @@ def test_registration_order_records_before_and_after_associations(fixtures_dir: 
     assert _observation(artifact, "endpoint:6").attribute("order") == "3"
 
 
-def test_comments_strings_and_unknown_receivers_do_not_fabricate_facts(tmp_path: Path):
+def test_comments_strings_unknown_and_duplicate_receivers_do_not_fabricate_facts(tmp_path: Path):
     source = tmp_path / "negative.js"
     source.write_text(
         '// app.get("/comment", requireAuth, handler)\n'
@@ -114,4 +114,20 @@ def test_comments_strings_and_unknown_receivers_do_not_fabricate_facts(tmp_path:
     assert artifact.observations == ()
     assert [(item.subject_id, item.reason, item.span.start_line) for item in artifact.unresolved] == [
         (None, "route receiver is not a known literal router", 3)
+    ]
+
+    duplicate = tmp_path / "duplicate.js"
+    duplicate.write_text(
+        'const router = express.Router();\n'
+        'const router = express.Router();\n'
+        'router.get("/ambiguous", handler);\n',
+        encoding="utf-8",
+    )
+
+    artifact = extract_express_spike(duplicate)
+
+    assert [observation.kind for observation in artifact.observations] == ["router"]
+    assert [(item.reason, item.span.start_line) for item in artifact.unresolved] == [
+        ("duplicate router receiver declaration", 2),
+        ("route receiver has a duplicate declaration", 3),
     ]

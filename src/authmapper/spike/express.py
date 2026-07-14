@@ -109,6 +109,7 @@ def extract_express_spike(path: Path, *, root: Path | None = None) -> SpikeArtif
     associations: list[AssociationEdge] = []
     unresolved: list[UnresolvedObservation] = []
     receiver_scopes: dict[str, str] = {"app": "scope:application:app"}
+    ambiguous_receivers: set[str] = set()
     app_span = _span(relative, 1, 1, 1, 1)
     scopes.append(ScopeNode("scope:application:app", "application", app_span))
     mounts: dict[str, tuple[str, str, SourceSpan]] = {}
@@ -130,7 +131,6 @@ def extract_express_spike(path: Path, *, root: Path | None = None) -> SpikeArtif
         router_match = _ROUTER.match(code)
         if router_match:
             name = router_match["name"]
-            scope_id = f"scope:router:{name}"
             span = _span(
                 relative,
                 line_number,
@@ -138,6 +138,11 @@ def extract_express_spike(path: Path, *, root: Path | None = None) -> SpikeArtif
                 line_number,
                 router_match.end("name") + 1,
             )
+            if name in receiver_scopes:
+                ambiguous_receivers.add(name)
+                unresolved.append(_unresolved(span, None, "duplicate router receiver declaration"))
+                continue
+            scope_id = f"scope:router:{name}"
             receiver_scopes[name] = scope_id
             scopes.append(ScopeNode(scope_id, "router", span))
             observations.append(_observation("router", name, span, name=name))
@@ -155,6 +160,9 @@ def extract_express_spike(path: Path, *, root: Path | None = None) -> SpikeArtif
             receiver = mount_match["receiver"]
             child = mount_match["child"]
             span = _match_span(relative, line_number, mount_match)
+            if receiver in ambiguous_receivers or child in ambiguous_receivers:
+                unresolved.append(_unresolved(span, None, "mount receiver or child has a duplicate declaration"))
+                continue
             if receiver not in receiver_scopes or child not in receiver_scopes:
                 unresolved.append(
                     _unresolved(span, None, "mount receiver or child is not a known literal router")
@@ -179,6 +187,9 @@ def extract_express_spike(path: Path, *, root: Path | None = None) -> SpikeArtif
             sequence += 1
             receiver = middleware_match["receiver"]
             span = _match_span(relative, line_number, middleware_match)
+            if receiver in ambiguous_receivers:
+                unresolved.append(_unresolved(span, None, "middleware receiver has a duplicate declaration"))
+                continue
             if receiver not in receiver_scopes:
                 unresolved.append(
                     _unresolved(span, None, "middleware receiver is not a known literal router")
@@ -195,6 +206,9 @@ def extract_express_spike(path: Path, *, root: Path | None = None) -> SpikeArtif
             sequence += 1
             receiver = route_match["receiver"]
             span = _match_span(relative, line_number, route_match)
+            if receiver in ambiguous_receivers:
+                unresolved.append(_unresolved(span, None, "route receiver has a duplicate declaration"))
+                continue
             if receiver not in receiver_scopes:
                 unresolved.append(
                     _unresolved(span, None, "route receiver is not a known literal router")
