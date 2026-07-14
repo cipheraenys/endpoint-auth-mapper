@@ -17,6 +17,7 @@ Commit shared default options to a `.authmap.json` file at the root of your proj
 - `excludes`: Array of directory name strings to skip.
 - `min_confidence`: String (`low`, `medium`, `high`).
 - `fail_on`: String (`EXPOSED`, `UNKNOWN`, `CRITICAL`, `HIGH`, `MEDIUM`, `LOW`).
+- `experimental_ast`: Boolean — enable experimental AST-based analysis (default: `false`).
 
 ## Ignore file (`.authmapignore`)
 
