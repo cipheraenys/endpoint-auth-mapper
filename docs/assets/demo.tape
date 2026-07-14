@@ -3,35 +3,31 @@ Output docs/assets/demo.gif
 Set FontSize 14
 Set Width 120
 Set Height 35
-Set Theme "Dracula"
+Set Theme "Builtin Dark"
+Set Padding 0
 
-Type "authmap --project . --interactive"
+Type "authmap --project tests/fixtures --interactive"
 Enter
+Sleep 3s
+
+Down
+Sleep 500ms
+Down
+Sleep 500ms
+Down
+Sleep 500ms
+
+Type "?"
 Sleep 2s
 
-# Navigate down a few times
-Down
-Sleep 500ms
-Down
-Sleep 500ms
-Down
+Type "?"
 Sleep 500ms
 
-# Open help overlay
-?
-Sleep 2s
-
-# Close help
-?
-Sleep 500ms
-
-# Toggle search
-/
+Type "/"
 Sleep 500ms
 Type "admin"
 Sleep 1s
 
-# Clear search and exit
 Escape
 Sleep 500ms
-q
+Type "q"
