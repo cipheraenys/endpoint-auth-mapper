@@ -2,6 +2,8 @@
 # The analyzer writes attack-surface maps here. These are sensitive artifacts.
 .security-reports/
 *.authmap.json
+!.authmap.json
+!*.authmap-baseline.json
 *.authmap.sarif
 *.authmap.html
 

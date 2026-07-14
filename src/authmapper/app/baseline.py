@@ -22,9 +22,7 @@ from ..core.model import Finding
 class BaselineError(Exception):
     """Raised when a baseline file is present but invalid.
 
-    A *missing* baseline is acceptable — it is treated as an empty accepted
-    set.  A *present but malformed* file must not silently pass all findings
-    through ungated, which would defeat the purpose of the baseline workflow.
+    An explicitly configured baseline must exist and match the baseline schema.
     """
 
 
@@ -38,15 +36,13 @@ def fingerprint(finding: Finding) -> str:
 def load_baseline(path: Path) -> set[str]:
     """Load a set of accepted fingerprints from ``path``.
 
-    Returns an empty set when ``path`` does not exist (the file is optional).
-
-    Raises :class:`BaselineError` when the file exists but cannot be read,
+    Raises :class:`BaselineError` when the file does not exist, cannot be read,
     contains invalid JSON, or has an unexpected structure.  Silently ignoring
     a corrupt baseline would pass every finding ungated, which is the opposite
     of the intent.
     """
     if not path.exists():
-        return set()
+        raise BaselineError(f"baseline does not exist: '{path}'")
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
@@ -57,10 +53,19 @@ def load_baseline(path: Path) -> set[str]:
             f"invalid baseline '{path}': expected a JSON object, "
             f"got {type(data).__name__}"
         )
-    fingerprints = data.get("fingerprints", [])
-    if not isinstance(fingerprints, list):
+    unknown = sorted(set(data) - {"version", "fingerprints"})
+    if unknown:
         raise BaselineError(
-            f"invalid baseline '{path}': 'fingerprints' must be a list"
+            f"invalid baseline '{path}': unknown field(s): {', '.join(unknown)}"
+        )
+    if data.get("version") != "1.0":
+        raise BaselineError(f"invalid baseline '{path}': 'version' must be '1.0'")
+    fingerprints = data.get("fingerprints")
+    if not isinstance(fingerprints, list) or any(
+        not isinstance(item, str) or not item for item in fingerprints
+    ):
+        raise BaselineError(
+            f"invalid baseline '{path}': 'fingerprints' must be a list of non-empty strings"
         )
     return set(fingerprints)
 
