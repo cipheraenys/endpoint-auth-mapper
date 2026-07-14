@@ -45,10 +45,7 @@ def looks_public(route: str, exempt_paths: tuple[str, ...]) -> bool:
     for p in exempt_paths:
         if _is_segment_match(normalized, p):
             return True
-    for hint in _PUBLIC_HINTS:
-        if _is_segment_match(normalized, hint):
-            return True
-    return False
+    return any(_is_segment_match(normalized, hint) for hint in _PUBLIC_HINTS)
 
 
 def classify_state(

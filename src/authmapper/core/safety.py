@@ -14,6 +14,7 @@ explicit filesystem checks in :func:`ensure_within`.
 
 from __future__ import annotations
 
+import contextlib
 import multiprocessing
 import multiprocessing.queues
 import re
@@ -225,10 +226,10 @@ class SafeMatcher:
 
         try:
             status, payload = self._result_q.get(timeout=self._timeout)
-        except Exception:
+        except Exception as exc:
             # Queue timeout or broken pipe — worker took too long or crashed.
             self._teardown_worker()
-            raise RegexTimeout(f"regex exceeded {self._timeout}s budget")
+            raise RegexTimeout(f"regex exceeded {self._timeout}s budget") from exc
 
         if status == "error":
             raise RuntimeError(f"regex worker error: {payload}")
@@ -246,10 +247,8 @@ class SafeMatcher:
         self._teardown_worker()
 
     def __del__(self) -> None:  # pragma: no cover — destructor safety net
-        try:
+        with contextlib.suppress(Exception):
             self.close()
-        except Exception:  # noqa: BLE001, S110 — suppress in finalizer
-            pass
 
 
 def compile_pattern(source: str, ignore_case: bool = True) -> re.Pattern[str]:
@@ -297,7 +296,7 @@ def ensure_within(root: Path, candidate: Path) -> Path:
     containing ``..``). Returns the resolved, confined path.
     """
     root_resolved = root.resolve()
-    if candidate.is_absolute():
+    if candidate.is_absolute():  # noqa: SIM108 — readability over ternary for path ops
         target = candidate.resolve()
     else:
         target = (root_resolved / candidate).resolve()

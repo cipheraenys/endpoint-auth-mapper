@@ -6,7 +6,7 @@ from typing import Any
 
 from .analyzer import Analyzer
 from .model import AuthState, Confidence, Endpoint, Evidence, Finding, Severity
-from .rulepack import RulePack, SCOPE_SAME_LINE
+from .rulepack import RulePack
 from .walker import SourceFile
 
 
@@ -38,7 +38,7 @@ class ASTAnalyzer(Analyzer):
             self._parsers[language] = (lang, parser)
             return lang, parser
         except ImportError as e:
-            raise RuntimeError(f"Missing tree-sitter language '{language}': {e}")
+            raise RuntimeError(f"Missing tree-sitter language '{language}': {e}") from e
 
     def analyze(self, source: SourceFile, pack: RulePack) -> list[Finding]:
         if not self.is_available() or not pack.ast_language or not pack.ast_endpoints:
@@ -54,8 +54,7 @@ class ASTAnalyzer(Analyzer):
         endpoints_found = []
         for ep_pattern in pack.ast_endpoints:
             query = lang.query(ep_pattern.query)
-            captures = query.captures(tree.root_node)
-            
+
             # Group captures by match (simplified assumption: sequential non-overlapping matches)
             # A robust query execution would use query.matches()
             for match in query.matches(tree.root_node):
@@ -93,9 +92,8 @@ class ASTAnalyzer(Analyzer):
             return []
 
         # Find auth guards
-        file_guards = []
-        node_guards = [] # Node guards would require mapping to endpoint AST nodes, for simplicity we treat all guards found via AST as file-level or block-level if we implement it.
-        # But wait, AST can be precise. Let's just do a basic implementation that replicates scope.
+        file_guards: list[Evidence] = []
+        # AST can be precise per-node, but for now treat all guards as file-level.
         
         for sig_pattern in pack.ast_auth_signals:
             query = lang.query(sig_pattern.query)

@@ -1,12 +1,13 @@
 """Regex-based analyzer."""
 from __future__ import annotations
+
 import re
-from typing import Any
+
 from .analyzer import Analyzer
-from .model import AuthState, Confidence, Endpoint, Evidence, Finding, Severity
+from .classifier import classify_state, looks_public, severity_for
+from .model import AuthState, Confidence, Endpoint, Evidence, Finding
 from .rulepack import ENDPOINT_MODEL_FILE, SCOPE_SAME_LINE, RulePack
 from .safety import SafeMatcher, redact
-from .classifier import classify_state, looks_public, severity_for
 from .walker import SourceFile
 
 _SUPPRESSION_RE = re.compile(r"authmap:ignore(?:\s+reason=(?P<reason>[^\n]+))?", re.IGNORECASE)

@@ -19,13 +19,12 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
-from .model import ScanResult, ScanError, Finding
+from .ast_analyzer import ASTAnalyzer
+from .model import Finding, ScanError, ScanResult
+from .regex_analyzer import RegexAnalyzer
 from .rulepack import RulePack
 from .safety import SafeMatcher
 from .walker import FileWalker, SourceFile
-from .analyzer import Analyzer
-from .regex_analyzer import RegexAnalyzer
-from .ast_analyzer import ASTAnalyzer
 
 
 @dataclass(frozen=True)

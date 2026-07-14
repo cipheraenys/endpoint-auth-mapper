@@ -8,7 +8,6 @@ import pytest
 
 from authmapper.core.safety import (
     PathConfinementError,
-    RegexTimeout,
     SafeMatcher,
     compile_pattern,
     ensure_within,

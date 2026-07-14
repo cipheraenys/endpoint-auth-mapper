@@ -90,7 +90,7 @@ def _render_rows(result: ScanResult, *, color: bool) -> list[str]:
     out.append(_bold(header_line, use_color=color))
     out.append("  ".join("-" * widths[i] for i in range(len(headers))))
 
-    for f, row in zip(result.sorted_findings(), rows):
+    for f, row in zip(result.sorted_findings(), rows, strict=True):
         state_color = _STATE_COLOR.get(f.auth_state, "")
         cells = [cell.ljust(widths[i]) for i, cell in enumerate(row)]
         line = "  ".join(cells)

@@ -9,7 +9,7 @@ A reporter is any callable matching :data:`Reporter`.
 
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 from ..core.model import ScanResult
 

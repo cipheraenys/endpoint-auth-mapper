@@ -50,7 +50,7 @@ class RunConfig:
     quiet: bool = False
     experimental_ast: bool = False
 
-    def merged_with_file(self) -> "RunConfig":
+    def merged_with_file(self) -> RunConfig:
         """Return a new config with values from the project ``.authmap.json`` applied.
 
         Only fields still at their dataclass defaults are overridden; explicit
