@@ -70,3 +70,16 @@ opening a public issue.
   corroborated.
 - It analyzes source, not runtime; endpoints created dynamically at runtime may
   not be visible.
+
+## Runtime dependencies
+
+`jsonschema==4.26.0` is the maintained MIT-licensed validator used for public
+JSON Schema 2020-12 contracts, including `$ref` and
+`unevaluatedProperties`. It validates inert manifest data only; it does not
+load package entrypoints, import target projects, access the network, or execute
+target code. Dependency source and release metadata are published at
+<https://github.com/python-jsonschema/jsonschema> and PyPI. Dependency updates
+require schema conformance, full regression, license, and vulnerability review.
+
+`types-jsonschema==4.26.0.20260518` is a development-only Apache-2.0 typeshed
+stub package and is not installed at runtime.

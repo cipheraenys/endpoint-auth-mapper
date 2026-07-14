@@ -5,7 +5,7 @@
 ![License](https://img.shields.io/github/license/cipheraenys/endpoint-auth-mapper)
 ![Version](https://img.shields.io/github/v/tag/cipheraenys/endpoint-auth-mapper?label=version)
 
-A local, offline, dependency-free static analyzer that maps candidate HTTP endpoints
+A local, offline static analyzer that maps candidate HTTP endpoints
 across languages and classifies each one's **authentication posture** as
 `PROTECTED`, `EXPOSED`, `UNKNOWN`, or `PUBLIC`.
 
@@ -53,7 +53,7 @@ CI-friendly way to catch them **before deployment**.
 | **Source-gated** | Analyzes source you already possess. No network, no URLs, no live probing. |
 | **Fail-safe** | Unassociated auth signals resolve to `UNKNOWN`, never `PROTECTED`. |
 | **Read-only** | Target code is parsed as text, never imported or executed. |
-| **Zero-dependency** | Python standard library only at runtime. |
+| **Audited dependencies** | Explicit pinned dependencies validate public contracts; target code is never executed. |
 | **Confidential output** | Reports are written to a gitignored directory; secrets are redacted. |
 | **Deterministic** | Sorted, stable output suitable for CI diffing and baselines. |
 | **Coverage-aware** | Every eligible source is reported as analyzed, excluded, unsupported, skipped, or error. |
@@ -86,7 +86,8 @@ composition are not proved by these packs. See
 
 ## Install
 
-Requires Python 3.10+. No third-party packages.
+Requires Python 3.10+. Installation includes the pinned `jsonschema` validator
+used for public v2 manifest contracts.
 
 ```bash
 # From a checkout:
