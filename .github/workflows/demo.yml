@@ -19,13 +19,14 @@ jobs:
       - name: Install package
         run: pip install -e .
 
-      - name: Install ffmpeg
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Install VHS dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          go install github.com/charmbracelet/vhs@latest
 
       - name: Record demo GIF
-        uses: charmbracelet/vhs-action@v2
-        with:
-          path: docs/assets/demo.tape
+        run: vhs docs/assets/demo.tape
 
       - name: Upload GIF artifact
         uses: actions/upload-artifact@v4
