@@ -94,6 +94,7 @@ class TuiApp:
         if not self._can_render():
             raise UnsupportedTerminalError("terminal does not support ANSI rendering")
         backend = AnsiBackend(self._stdout)
+        self._render(backend)
         for _key in read_keys(self._stdin):
             self._dispatch(_key)
             self._render(backend)
