@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import json
 
+from authmapper import __version__
+
 from ..core.model import AuthState, Finding, ScanResult, Severity
 
 _SARIF_LEVEL = {
@@ -44,8 +46,8 @@ def render_sarif(result: ScanResult) -> str:
                 "tool": {
                     "driver": {
                         "name": "endpoint-auth-mapper",
-                        "informationUri": "https://example.invalid/endpoint-auth-mapper",
-                        "version": "0.1.0",
+                        "informationUri": "https://github.com/cipheraenys/endpoint-auth-mapper",
+                        "version": __version__,
                         "rules": rules,
                     }
                 },
