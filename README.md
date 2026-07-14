@@ -17,15 +17,6 @@ It answers one question fast, in any codebase you own:
   <img src="docs/assets/demo.gif" alt="authmap interactive TUI demo" width="900">
 </p>
 
-```
-SEVERITY  STATE      ENDPOINT                         LOCATION               CONF
---------  ---------  -------------------------------  ---------------------  ----
-CRITICAL  EXPOSED    POST /api/admin/delete-user      server/server.js:246   high
-MEDIUM    UNKNOWN    ANY  /WebAdmin/api_users.php      WebAdmin/api_users.php:1  medium
-INFO      PROTECTED  GET  /api/profile                 routes/profile.js:12   high
-INFO      PUBLIC     GET  /health                      routes/health.js:3     high
-```
-
 <details>
 <summary><strong>Table of contents</strong></summary>
 
