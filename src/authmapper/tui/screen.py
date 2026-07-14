@@ -255,7 +255,7 @@ def enable_windows_vt() -> bool:
     except ImportError:  # pragma: no cover - not Windows
         return False
 
-    kernel32 = ctypes.windll.kernel32
+    kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
     STD_OUTPUT_HANDLE = -11
     ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004
 

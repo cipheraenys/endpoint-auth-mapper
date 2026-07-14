@@ -23,8 +23,8 @@ class _WindowsInput:
     def __init__(self) -> None:
         import msvcrt  # type: ignore[import-not-found, unused-ignore]
 
-        self._getch = msvcrt.getwch
-        self._kbhit = msvcrt.kbhit
+        self._getch = msvcrt.getwch  # type: ignore[attr-defined]
+        self._kbhit = msvcrt.kbhit  # type: ignore[attr-defined]
 
     def read_key(self) -> str:
         ch = self._getch()
