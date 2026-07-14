@@ -18,9 +18,8 @@ It answers one question fast, in any codebase you own:
 </p>
 
 ---
-<details>
+
 ## Table of contents
-<summary><strong>Click to expand</strong></summary>
 
 - [Why it exists](#why-it-exists)
 - [Design guarantees](#design-guarantees)
@@ -33,8 +32,6 @@ It answers one question fast, in any codebase you own:
 - [Documentation](#documentation)
 - [Scope of use](#scope-of-use)
 - [License](#license)
-
-</details>
 
 ---
 
