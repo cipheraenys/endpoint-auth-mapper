@@ -22,13 +22,10 @@ jobs:
       - name: Install ffmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      - name: Install VHS
-        run: |
-          go install github.com/charmbracelet/vhs@latest
-          echo "$HOME/go/bin" >> $GITHUB_PATH
-
       - name: Record demo GIF
-        run: vhs docs/assets/demo.tape
+        uses: charmbracelet/vhs-action@v1
+        with:
+          path: docs/assets/demo.tape
 
       - name: Upload GIF artifact
         uses: actions/upload-artifact@v4
