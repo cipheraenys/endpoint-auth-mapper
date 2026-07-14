@@ -4,9 +4,9 @@ Configure CI to fail when pull requests introduce unauthenticated endpoints.
 
 ## 1. GitHub Actions
 
-Create .github/workflows/authmap.yml:
+Create `.github/workflows/authmap.yml`:
 
-`yaml
+```yaml
 name: AuthMap
 on: [push, pull_request]
 jobs:
@@ -18,22 +18,22 @@ jobs:
         run: pip install ./endpoint-auth-mapper
       - name: Run Scan
         run: authmap --project . --fail-on EXPOSED --min-confidence high
-`
+```
 
 ## 2. GitLab CI
 
-Add to .gitlab-ci.yml:
+Add to `.gitlab-ci.yml`:
 
-`yaml
+```yaml
 authmap:
   stage: test
-  image: python:3.11
+  image: python:3.12
   script:
     - pip install ./endpoint-auth-mapper
     - authmap --project . --fail-on EXPOSED --min-confidence high
-`
+```
 
 ## Flags Details
 
-* --fail-on EXPOSED: Fails pipeline (exit code 1) if any EXPOSED endpoints exist.
-* --min-confidence high: Skips low or medium confidence detections to reduce false positives in CI blocks.
+- `--fail-on EXPOSED`: Fails pipeline (exit code 1) if any EXPOSED endpoints exist.
+- `--min-confidence high`: Skips low or medium confidence detections to reduce false positives in CI blocks.

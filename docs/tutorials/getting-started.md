@@ -20,7 +20,7 @@ authmap --project .
 
 **Console Output:**
 Detects endpoints, evaluates auth coverage. Outputs table format.
-Columns: `SEVERITY`, `STATUS`, `METHOD`, `PATH`, `FILE:LINE`, `CONFIDENCE`.
+Columns: `SEVERITY`, `STATE`, `ENDPOINT`, `LOCATION`, `CONF`.
 
 Example:
 ```text

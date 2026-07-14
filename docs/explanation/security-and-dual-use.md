@@ -10,7 +10,7 @@ We deliberately constrain the tool to the defensive side of that line.
 
 - **Source code only**: The tool requires read access to the source code repository. It cannot be pointed at a live website or production URL.
 - **Zero network capability**: The tool has no HTTP clients, sockets, or telemetry. It cannot send requests, nor can it exfiltrate findings. 
-- **Confidential reports**: Scan outputs are saved to a `.security-reports/` directory that is automatically ignored by Git (via the generated `.gitignore`), preventing accidental commit of sensitive vulnerability maps.
+- **Confidential reports**: Scan outputs are saved to a `.security-reports/` directory that is listed in the project's `.gitignore`, preventing accidental commit of sensitive vulnerability maps.
 - **Fail-safe analysis**: Ambiguity is always flagged for human review (`UNKNOWN`), rather than assuming an endpoint is safe.
 
 For the complete, authoritative statement on our threat model, safety boundaries, and vulnerability reporting process, please read the [SECURITY.md](../../SECURITY.md) file at the root of the repository.
