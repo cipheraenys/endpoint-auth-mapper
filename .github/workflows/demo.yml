@@ -24,6 +24,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg
           go install github.com/charmbracelet/vhs@latest
+          echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: Record demo GIF
         run: vhs docs/assets/demo.tape
