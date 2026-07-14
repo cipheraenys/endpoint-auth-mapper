@@ -94,15 +94,17 @@ class TuiApp:
         if not self._can_render():
             raise UnsupportedTerminalError("terminal does not support ANSI rendering")
         backend = AnsiBackend(self._stdout)
+        self._stdout.write("\033[?1049h")  # enter alternate screen
+        self._stdout.flush()
         self._render(backend)
         for _key in read_keys(self._stdin):
             self._dispatch(_key)
             self._render(backend)
             if self._quit:
                 break
-        # Restore cursor visibility on exit.
+        # Leave alternate screen and restore cursor visibility on exit.
         try:
-            self._stdout.write("\033[?25h")
+            self._stdout.write("\033[?1049l\033[?25h")
             self._stdout.flush()
         except OSError:  # pragma: no cover - terminal vanished
             pass
