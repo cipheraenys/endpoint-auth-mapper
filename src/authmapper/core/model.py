@@ -69,6 +69,19 @@ class Severity(enum.Enum):
         return self.value
 
 
+class CoverageStatus(enum.Enum):
+    """Processing outcome for one eligible source file."""
+
+    ANALYZED = "ANALYZED"
+    EXCLUDED = "EXCLUDED"
+    UNSUPPORTED = "UNSUPPORTED"
+    SKIPPED = "SKIPPED"
+    ERROR = "ERROR"
+
+    def __str__(self) -> str:  # pragma: no cover - trivial
+        return self.value
+
+
 @dataclass(frozen=True)
 class Evidence:
     """A single piece of supporting proof for a finding.
@@ -175,6 +188,24 @@ class ScanError:
 
 
 @dataclass(frozen=True)
+class SourceCoverage:
+    """Coverage status and diagnostic for one eligible source file."""
+
+    file: str
+    status: CoverageStatus
+    reason: str = ""
+    rulepacks: tuple[str, ...] = field(default_factory=tuple)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "file": self.file,
+            "status": str(self.status),
+            "reason": self.reason,
+            "rulepacks": list(self.rulepacks),
+        }
+
+
+@dataclass(frozen=True)
 class ScanResult:
     """Aggregate output of a full analysis run."""
 
@@ -184,6 +215,7 @@ class ScanResult:
     files_skipped: int
     rulepacks_used: tuple[str, ...]
     duration_seconds: float
+    coverage: tuple[SourceCoverage, ...] = field(default_factory=tuple)
 
     def sorted_findings(self, include_suppressed: bool = False) -> list[Finding]:
         items = [f for f in self.findings if include_suppressed or not f.suppressed]
@@ -202,16 +234,35 @@ class ScanResult:
             return Severity.INFO
         return max((f.severity for f in active), key=lambda s: s.rank)
 
+    def coverage_counts(self) -> dict[str, int]:
+        counts = {status.value: 0 for status in CoverageStatus}
+        for record in self.coverage:
+            counts[record.status.value] += 1
+        return counts
+
+    def incomplete_coverage(self) -> tuple[SourceCoverage, ...]:
+        incomplete = {
+            CoverageStatus.UNSUPPORTED,
+            CoverageStatus.SKIPPED,
+            CoverageStatus.ERROR,
+        }
+        return tuple(record for record in self.coverage if record.status in incomplete)
+
+    def coverage_errors(self) -> tuple[SourceCoverage, ...]:
+        return tuple(record for record in self.coverage if record.status is CoverageStatus.ERROR)
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "findings": [f.to_dict() for f in self.sorted_findings(include_suppressed=True)],
             "errors": [e.to_dict() for e in self.errors],
+            "coverage": [record.to_dict() for record in self.coverage],
             "summary": {
                 "files_scanned": self.files_scanned,
                 "files_skipped": self.files_skipped,
                 "rulepacks_used": list(self.rulepacks_used),
                 "duration_seconds": round(self.duration_seconds, 4),
                 "counts_by_state": self.counts_by_state(),
+                "counts_by_coverage": self.coverage_counts(),
                 "max_severity": str(self.max_severity()),
             },
         }

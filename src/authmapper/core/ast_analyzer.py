@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from .analyzer import Analyzer
+from .classifier import looks_public
 from .model import AuthState, Confidence, Endpoint, Evidence, Finding, Severity
 from .rulepack import RulePack
 from .walker import SourceFile
@@ -13,9 +14,10 @@ from .walker import SourceFile
 class ASTAnalyzer(Analyzer):
     """Analyzes source files using tree-sitter if available."""
 
-    def __init__(self) -> None:
+    def __init__(self, public_paths: tuple[str, ...] = ()) -> None:
         self._tree_sitter_available = False
         self._parsers: dict[str, Any] = {}
+        self._public_paths = public_paths
         try:
             import tree_sitter  # type: ignore[import-not-found]
             self._tree_sitter = tree_sitter
@@ -91,9 +93,9 @@ class ASTAnalyzer(Analyzer):
         if not endpoints_found:
             return []
 
-        # Find auth guards
+        # Find auth guards. Until AST scope association is implemented, only an
+        # exact endpoint-line match can prove protection.
         file_guards: list[Evidence] = []
-        # AST can be precise per-node, but for now treat all guards as file-level.
         
         for sig_pattern in pack.ast_auth_signals:
             query = lang.query(sig_pattern.query)
@@ -121,10 +123,21 @@ class ASTAnalyzer(Analyzer):
             severity = Severity.HIGH
             finding_evidence: list[Evidence] = []
 
-            if file_guards:
+            if looks_public(endpoint.route, pack.exempt_paths + self._public_paths):
+                state = AuthState.PUBLIC
+                severity = Severity.INFO
+            else:
+                finding_evidence.extend(
+                    evidence for evidence in file_guards if evidence.line == endpoint.line
+                )
+            if finding_evidence:
                 state = AuthState.PROTECTED
                 confidence = Confidence.HIGH
                 severity = Severity.INFO
+            elif file_guards and state is not AuthState.PUBLIC:
+                state = AuthState.UNKNOWN
+                confidence = Confidence.MEDIUM
+                severity = Severity.MEDIUM
                 finding_evidence.extend(file_guards)
             
             # Check for generic suppressions or logic (for now, simplified)

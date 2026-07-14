@@ -82,7 +82,10 @@ def render_summary_bar(buffer: ScreenBuffer, result: ScanResult, width: int) -> 
         buffer.put_text(col, 0, chunk, style=style)
         col += len(chunk)
 
-    tail = f"│ max:{max_sev} │ files:{result.files_scanned}"
+    tail = (
+        f"│ max:{max_sev} │ files:{result.files_scanned}"
+        f" │ coverage!:{len(result.incomplete_coverage())}"
+    )
     tail_text = _fit_width(tail, width - col, pad=False)
     buffer.put_text(col, 0, tail_text, style=theme.dim)
     # Fill remainder of the line with default style.

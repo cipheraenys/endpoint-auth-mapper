@@ -22,6 +22,5 @@
       "regex": "\\b(?:app|router)\\.use\\s*\\(\\s*[^)]*\\b(auth|authenticate|requireAuth|passport|jwt)\\b",
       "scope": "file"
     }
-  ],
-  "exempt_paths": ["/health", "/healthz", "/ping", "/metrics", "/status"]
+  ]
 }

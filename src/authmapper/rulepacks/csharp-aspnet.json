@@ -32,6 +32,5 @@
       "regex": "User\\.Identity\\.IsAuthenticated",
       "scope": "file"
     }
-  ],
-  "exempt_paths": ["/health", "/healthz", "/ping", "/metrics", "/status"]
+  ]
 }

@@ -18,8 +18,9 @@ _FIX_HINTS = {
 }
 
 class RegexAnalyzer(Analyzer):
-    def __init__(self, matcher: SafeMatcher) -> None:
+    def __init__(self, matcher: SafeMatcher, public_paths: tuple[str, ...] = ()) -> None:
         self._matcher = matcher
+        self._public_paths = public_paths
 
     def analyze(self, source: SourceFile, pack: RulePack) -> list[Finding]:
         return self._analyze(source, pack)
@@ -86,24 +87,30 @@ class RegexAnalyzer(Analyzer):
         lines: list[str],
     ) -> Finding:
         same_line_guard = self._find_same_line_guard(endpoint, pack, lines)
-        guard = same_line_guard or file_guard
+        guard = same_line_guard
+        relevant_evidence = same_line_guard or file_guard
         guard_found = guard is not None
 
-        is_public = looks_public(endpoint.route, pack.exempt_paths)
+        is_public = looks_public(endpoint.route, pack.exempt_paths + self._public_paths)
 
         # Confidence blends discovery confidence with guard evidence strength.
-        confidence = self._effective_confidence(discovery_confidence, same_line_guard, file_guard)
+        confidence = self._effective_confidence(
+            discovery_confidence,
+            same_line_guard,
+            file_guard,
+            file_model=pack.endpoint_model == ENDPOINT_MODEL_FILE,
+        )
         state = classify_state(guard_found=guard_found, confidence=confidence, is_public=is_public)
         severity = severity_for(state, confidence)
 
-        evidence = tuple(e for e in (guard,) if e is not None)
+        evidence = tuple(e for e in (relevant_evidence,) if e is not None)
         finding = Finding(
             endpoint=endpoint,
             auth_state=state,
             confidence=confidence,
             severity=severity,
             evidence=evidence,
-            rationale=self._rationale(state, guard),
+            rationale=self._rationale(state, relevant_evidence),
             fix_hint=_FIX_HINTS.get(state, ""),
         )
         return self._apply_suppression(finding, lines)
@@ -147,13 +154,15 @@ class RegexAnalyzer(Analyzer):
         discovery_confidence: Confidence,
         same_line_guard: Evidence | None,
         file_guard: Evidence | None,
+        *,
+        file_model: bool,
     ) -> Confidence:
         # A same-line guard is strong corroboration; a file guard on a
         # coarsely-discovered endpoint stays capped at the discovery level.
         if same_line_guard is not None:
             return Confidence.HIGH
         if file_guard is not None:
-            return discovery_confidence
+            return discovery_confidence if file_model else Confidence.MEDIUM
         return discovery_confidence
 
     # -- suppression ---------------------------------------------------------
@@ -190,7 +199,9 @@ class RegexAnalyzer(Analyzer):
         if state is AuthState.EXPOSED:
             return "No authentication guard detected for a confidently identified endpoint."
         if state is AuthState.UNKNOWN:
+            if guard is not None:
+                return "An authentication signal exists but cannot be associated with this endpoint."
             return "Endpoint structure or guard could not be confidently resolved."
         if state is AuthState.PUBLIC:
-            return "Route matches a documented public/health path."
+            return "Route matches an explicit public-path declaration."
         return ""

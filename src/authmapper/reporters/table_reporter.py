@@ -55,6 +55,14 @@ def render_table(result: ScanResult) -> str:
 
     lines.append("")
     lines.extend(_render_summary(result, color=color))
+    incomplete = result.incomplete_coverage()
+    if incomplete:
+        lines.append("")
+        lines.append(_bold(f"Incomplete coverage ({len(incomplete)}):", use_color=color))
+        for record in incomplete[:20]:
+            lines.append(f"  ! {record.status}: {record.file}: {record.reason}")
+        if len(incomplete) > 20:
+            lines.append(f"  ... and {len(incomplete) - 20} more")
     if result.errors:
         lines.append("")
         lines.append(_bold(f"Scan warnings ({len(result.errors)}):", use_color=color))
@@ -100,6 +108,7 @@ def _render_rows(result: ScanResult, *, color: bool) -> list[str]:
 
 def _render_summary(result: ScanResult, *, color: bool) -> list[str]:
     counts = result.counts_by_state()
+    coverage = result.coverage_counts()
     parts = [
         f"{_c('EXPOSED', _STATE_COLOR[AuthState.EXPOSED], use_color=color)}={counts['EXPOSED']}",
         f"{_c('UNKNOWN', _STATE_COLOR[AuthState.UNKNOWN], use_color=color)}={counts['UNKNOWN']}",
@@ -111,6 +120,7 @@ def _render_summary(result: ScanResult, *, color: bool) -> list[str]:
         "  " + "  ".join(parts),
         f"  files scanned={result.files_scanned}  skipped={result.files_skipped}"
         f"  rulepacks={len(result.rulepacks_used)}  time={result.duration_seconds:.3f}s",
+        "  coverage " + "  ".join(f"{status}={count}" for status, count in coverage.items()),
         f"  max severity={_severity_label(result.max_severity())}",
     ]
     return summary
