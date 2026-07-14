@@ -13,6 +13,10 @@ It answers one question fast, in any codebase you own:
 
 > *Which of my HTTP endpoints have no authentication guard?*
 
+<p align="center">
+  <img src="docs/assets/demo.gif" alt="authmap interactive TUI demo" width="900">
+</p>
+
 ```
 SEVERITY  STATE      ENDPOINT                         LOCATION               CONF
 --------  ---------  -------------------------------  ---------------------  ----
