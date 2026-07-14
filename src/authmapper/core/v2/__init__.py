@@ -3,6 +3,18 @@
 from __future__ import annotations
 
 from .adapter import Adapter, AdapterArtifact, AdapterInput
+from .compatibility import LEGACY_COMPATIBILITY_VERSION, legacy_compatibility_document
+from .contracts import (
+    BASELINE_SCHEMA_VERSION,
+    CONFIG_SCHEMA_VERSION,
+    EXCEPTION_SCHEMA_VERSION,
+    FACT_GRAPH_VERSION,
+    MANIFEST_SCHEMA_VERSION,
+    REPORT_SCHEMA_ID,
+    REPORT_SCHEMA_VERSION,
+    SARIF_MAPPING_VERSION,
+)
+from .fingerprint import Fingerprint, endpoint_fingerprint, proof_fingerprint
 from .graph import EvidenceGraph, GraphValidationError
 from .manifest import ManifestError, RulepackManifest, load_manifest, parse_manifest
 from .model import (
@@ -37,6 +49,7 @@ from .package import (
     OwnershipState,
     PackageLifecycle,
 )
+from .report import EvidenceReport, InvocationProvenance, report_document
 from .resolver import resolve_endpoints
 from .semantics import SemanticKind, SemanticRule
 
@@ -47,29 +60,41 @@ __all__ = [
     "AdapterInput",
     "ApplicabilityResult",
     "ApplicabilityState",
+    "BASELINE_SCHEMA_VERSION",
     "Capability",
     "CapabilityMaturity",
     "CapabilityProvenance",
+    "CONFIG_SCHEMA_VERSION",
     "CoverageRecord",
     "CoverageStatus",
     "Diagnostic",
     "DiagnosticLevel",
     "EndpointResolution",
     "EndpointVerdict",
+    "EXCEPTION_SCHEMA_VERSION",
     "EvidenceAssociation",
     "EvidenceGraph",
+    "EvidenceReport",
+    "FACT_GRAPH_VERSION",
     "Fact",
     "FactKind",
+    "Fingerprint",
     "GraphValidationError",
+    "InvocationProvenance",
+    "LEGACY_COMPATIBILITY_VERSION",
+    "MANIFEST_SCHEMA_VERSION",
     "ManifestError",
     "OwnershipDecision",
     "OwnershipState",
     "PackageLifecycle",
     "Proof",
     "ProofKind",
+    "REPORT_SCHEMA_ID",
+    "REPORT_SCHEMA_VERSION",
     "Relation",
     "RelationKind",
     "RulepackManifest",
+    "SARIF_MAPPING_VERSION",
     "Scope",
     "ScopeKind",
     "SourceSpan",
@@ -78,7 +103,11 @@ __all__ = [
     "Subject",
     "SubjectKind",
     "UnresolvedRecord",
+    "endpoint_fingerprint",
+    "legacy_compatibility_document",
     "load_manifest",
     "parse_manifest",
+    "proof_fingerprint",
+    "report_document",
     "resolve_endpoints",
 ]

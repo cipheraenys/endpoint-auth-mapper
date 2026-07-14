@@ -10,6 +10,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Strict, versioned project-config validation and explicit `public_paths` policy.
 - Source coverage records in JSON, SARIF, table, and TUI summaries.
 - `--strict-coverage` for CI assurance runs.
+- Additive evidence report `2.0` schema, deterministic serializer, semantic
+  fingerprints, SARIF mapping, and labeled legacy compatibility artifact.
 
 ### Changed
 - File-wide auth signals no longer prove any bundled endpoint protected.

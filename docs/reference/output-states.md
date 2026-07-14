@@ -25,3 +25,7 @@ top-level `coverage` array and `summary.counts_by_coverage`; see
 [Configuration](configuration.md#source-coverage).
 
 For more details on the rationale behind this fail-safe approach, see the [Classification model](../explanation/classification-model.md) explanation.
+
+These are legacy JSON `1.1` states. Evidence report `2.0` defines separate
+evidence-first verdicts and does not translate these states. See
+[Evidence report v2](evidence-report-v2.md).
