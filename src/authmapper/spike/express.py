@@ -117,7 +117,7 @@ def extract_express_spike(path: Path, *, root: Path | None = None) -> SpikeArtif
     sequence = 0
 
     for line_number, line in enumerate(lines, start=1):
-        code = line.split("//", 1)[0].rstrip()
+        code = _without_line_comment(line).rstrip()
         if not code:
             continue
         application_match = _APPLICATION.match(code)
@@ -269,9 +269,21 @@ def extract_express_spike(path: Path, *, root: Path | None = None) -> SpikeArtif
                         middleware_span,
                     )
                 )
-            for name in _inline_middleware(route_match["tail"]):
+            for name, offset in _inline_middleware(route_match["tail"]):
+                start_column = route_match.start("tail") + offset + 1
+                middleware_span = _span(
+                    relative,
+                    line_number,
+                    start_column,
+                    line_number,
+                    start_column + len(name),
+                )
                 evidence = _observation(
-                    "middleware", f"inline:{line_number}:{name}", span, name=name, order=str(sequence)
+                    "middleware",
+                    f"inline:{line_number}:{name}",
+                    middleware_span,
+                    name=name,
+                    order=str(sequence),
                 )
                 observations.append(evidence)
                 associations.append(
@@ -281,7 +293,7 @@ def extract_express_spike(path: Path, *, root: Path | None = None) -> SpikeArtif
                         evidence.id,
                         route_scope_id,
                         f"inline route middleware at registration order {sequence}",
-                        span,
+                        middleware_span,
                     )
                 )
             continue
@@ -318,9 +330,35 @@ def _unresolved(span: SourceSpan, subject_id: str | None, reason: str) -> Unreso
     return UnresolvedObservation(f"unresolved:{span.start_line}", subject_id, reason, span)
 
 
-def _inline_middleware(tail: str) -> tuple[str, ...]:
+def _inline_middleware(tail: str) -> tuple[tuple[str, int], ...]:
     arguments = tail.split(",")[:-1]
-    return tuple(argument.strip() for argument in arguments if re.fullmatch(r"[A-Za-z_$][\w$]*", argument.strip()))
+    offset = 0
+    middleware: list[tuple[str, int]] = []
+    for argument in arguments:
+        name = argument.strip()
+        if re.fullmatch(r"[A-Za-z_$][\w$]*", name):
+            middleware.append((name, offset + len(argument) - len(argument.lstrip())))
+        offset += len(argument) + 1
+    return tuple(middleware)
+
+
+def _without_line_comment(line: str) -> str:
+    quote: str | None = None
+    escaped = False
+    for index, character in enumerate(line):
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == quote:
+                quote = None
+            continue
+        if character in {"'", '"', "`"}:
+            quote = character
+        elif character == "/" and line[index + 1 : index + 2] == "/":
+            return line[:index]
+    return line
 
 
 def _handler_reference(tail: str) -> str | None:

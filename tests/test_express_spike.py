@@ -19,11 +19,19 @@ def _observation(artifact, identifier: str):
 def test_scoped_middleware_associates_only_its_router(fixtures_dir: Path):
     artifact = _artifact(fixtures_dir, "scoped_middleware.js")
 
-    assert [(edge.endpoint_id, edge.evidence_id, edge.scope_id) for edge in artifact.associations] == [
-        ("endpoint:6", "middleware:5", "scope:router:protectedRouter")
+    associations = [(edge.endpoint_id, edge.evidence_id, edge.scope_id, edge.reason) for edge in artifact.associations]
+    assert associations == [
+        (
+            "endpoint:6",
+            "middleware:5",
+            "scope:router:protectedRouter",
+            "router middleware registered before route (1 < 2)",
+        )
     ]
     assert _observation(artifact, "endpoint:6").attribute("path") == "/account"
     assert _observation(artifact, "endpoint:7").attribute("path") == "/status"
+    assert _observation(artifact, "endpoint:6").attribute("order") == "2"
+    assert _observation(artifact, "endpoint:7").attribute("order") == "3"
 
 
 def test_nested_mount_retains_edges_and_normalized_route_span(fixtures_dir: Path):
@@ -35,13 +43,13 @@ def test_nested_mount_retains_edges_and_normalized_route_span(fixtures_dir: Path
     app_scope = next(scope for scope in artifact.scopes if scope.id == "scope:application:app")
     assert (app_scope.span.start_line, app_scope.span.start_column, app_scope.span.end_column) == (2, 1, 23)
     mounts = [
-        (edge.from_id, edge.to_id, edge.attribute("path"))
+        (edge.id, edge.from_id, edge.to_id, edge.attribute("path"), edge.attribute("order"))
         for edge in artifact.composition_edges
         if edge.kind == "mount"
     ]
     assert mounts == [
-        ("scope:application:app", "scope:router:parent", "/api"),
-        ("scope:router:parent", "scope:router:child", "/v1"),
+        ("edge:mount:5", "scope:application:app", "scope:router:parent", "/api", "1"),
+        ("edge:mount:6", "scope:router:parent", "scope:router:child", "/v1", "2"),
     ]
     mount_spans = [edge.span for edge in artifact.composition_edges if edge.kind == "mount"]
     assert [(span.start_line, span.start_column, span.end_column) for span in mount_spans] == [(5, 1, 25), (6, 1, 26)]
@@ -60,9 +68,17 @@ def test_inline_public_and_source_spans_are_observed_without_verdicts(fixtures_d
         ("endpoint:3", "inline:3:requireAuth", "inline route middleware at registration order 1"),
         ("endpoint:3", "inline:3:audit", "inline route middleware at registration order 1"),
     ]
+    require_auth = _observation(artifact, "inline:3:requireAuth")
+    audit = _observation(artifact, "inline:3:audit")
+    assert (require_auth.span.start_column, require_auth.span.end_column) == (21, 32)
+    assert (audit.span.start_column, audit.span.end_column) == (34, 39)
     public = _observation(artifact, "public:4")
     assert public.kind == "public_override"
     assert public.span.start_line == 4
+    assert public.attribute("path") == "/health"
+    assert not hasattr(artifact, "verdict")
+    assert not hasattr(artifact, "confidence")
+    assert not hasattr(artifact, "severity")
 
 
 def test_unrelated_middleware_has_no_positive_association(fixtures_dir: Path):
@@ -131,3 +147,13 @@ def test_comments_strings_unknown_and_duplicate_receivers_do_not_fabricate_facts
         ("duplicate router receiver declaration", 2),
         ("route receiver has a duplicate declaration", 3),
     ]
+
+
+def test_literal_path_with_double_slash_is_not_treated_as_a_comment(tmp_path: Path):
+    source = tmp_path / "path.js"
+    source.write_text('app.get("/redirect//target", handler); // literal route\n', encoding="utf-8")
+
+    artifact = extract_express_spike(source)
+
+    endpoint = _observation(artifact, "endpoint:1")
+    assert endpoint.attribute("path") == "/redirect//target"
