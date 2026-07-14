@@ -32,7 +32,7 @@ CI-friendly way to catch them **before deployment**.
 | Guarantee | How it is enforced |
 |---|---|
 | **Source-gated** | Analyzes source you already possess. No network, no URLs, no live probing. |
-| **Fail-safe** | Ambiguity resolves to `UNKNOWN`, never `PROTECTED`. Silence is never treated as safety. |
+| **Fail-safe** | Ambiguity resolves to `UNKNOWN`, never `PROTECTED`. |
 | **Read-only** | Target code is parsed as text, never imported or executed. |
 | **Zero-dependency** | Python standard library only at runtime. |
 | **Confidential output** | Reports are written to a gitignored directory; secrets are redacted. |
