@@ -17,8 +17,10 @@ It answers one question fast, in any codebase you own:
   <img src="docs/assets/demo.gif" alt="authmap interactive TUI demo" width="900">
 </p>
 
+---
 <details>
-<summary><strong>Table of contents</strong></summary>
+## Table of contents
+<summary><strong>Click to expand</strong></summary>
 
 - [Why it exists](#why-it-exists)
 - [Design guarantees](#design-guarantees)
