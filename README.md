@@ -1,5 +1,10 @@
 # Endpoint & Auth Mapper
 
+![CI](https://github.com/cipheraenys/endpoint-auth-mapper/actions/workflows/ci.yml/badge.svg)
+![Python](https://img.shields.io/badge/python-3.10+-blue.svg)
+![License](https://img.shields.io/github/license/cipheraenys/endpoint-auth-mapper)
+![Version](https://img.shields.io/github/v/tag/cipheraenys/endpoint-auth-mapper?label=version)
+
 A universal, offline, dependency-free static analyzer that maps HTTP endpoints
 across languages and classifies each one's **authentication posture** as
 `PROTECTED`, `EXPOSED`, `UNKNOWN`, or `PUBLIC`.
@@ -17,6 +22,23 @@ INFO      PROTECTED  GET  /api/profile                 routes/profile.js:12   hi
 INFO      PUBLIC     GET  /health                      routes/health.js:3     high
 ```
 
+<details>
+<summary><strong>Table of contents</strong></summary>
+
+- [Why it exists](#why-it-exists)
+- [Design guarantees](#design-guarantees)
+- [Supported stacks](#supported-stacks-bundled-rule-packs)
+- [Install](#install)
+- [Quick start](#quick-start)
+- [The three layers](#the-three-layers)
+- [Exit codes (CI contract)](#exit-codes-ci-contract)
+- [How classification works](#how-classification-works)
+- [Documentation](#documentation)
+- [Scope of use](#scope-of-use)
+- [License](#license)
+
+</details>
+
 ---
 
 ## Why it exists
@@ -28,6 +50,9 @@ hard to spot in review. This tool gives developers a fast, repeatable,
 CI-friendly way to catch them **before deployment**.
 
 ## Design guarantees
+
+<details>
+<summary>Click to expand</summary>
 
 | Guarantee | How it is enforced |
 |---|---|
@@ -41,12 +66,25 @@ CI-friendly way to catch them **before deployment**.
 
 See [`SECURITY.md`](./SECURITY.md) for the full dual-use statement and threat model.
 
+</details>
+
 ## Supported stacks (bundled rule packs)
 
-PHP (native/session), Node/Express, Python/Flask, Python/Django (+DRF),
-Java/Kotlin Spring, Go (net/http, chi, gin, mux), Ruby on Rails/Sinatra,
-C#/ASP.NET Core. Adding a stack is a JSON file — see
+<details>
+<summary>PHP, Node, Python, Java, Go, Ruby, C# — click to expand</summary>
+
+- **PHP** — native/session
+- **Node/Express**
+- **Python** — Flask, Django (+DRF)
+- **Java/Kotlin** — Spring
+- **Go** — net/http, chi, gin, mux
+- **Ruby** — Rails, Sinatra
+- **C#** — ASP.NET Core
+
+Adding a stack is a JSON file — see
 [Rule pack schema](./docs/reference/rulepack-schema.md).
+
+</details>
 
 ---
 
@@ -94,25 +132,28 @@ authmap --project . --fail-on EXPOSED --min-confidence high \
 
 ## Exit codes (CI contract)
 
+<details>
+<summary>Click to expand</summary>
+
 | Code | Meaning |
 |---|---|
 | `0` | No findings at or above `--fail-on` |
 | `1` | Gating findings present |
 | `2` | Tool/setup error |
 
+</details>
+
 ## How classification works
 
-```
-discover endpoints (rule pack)
-        │
-        ▼
-find auth guard (same-line or file-scope signal)
-        │
-        ▼
-classify:  guard found ............... PROTECTED
-           public/health path ........ PUBLIC
-           no guard, HIGH confidence .. EXPOSED
-           otherwise ................. UNKNOWN   ← fail-safe
+```mermaid
+flowchart TD
+    A[Discover endpoints via rule pack] --> B{Auth guard found?}
+    B -->|Yes| C["🟢 PROTECTED"]
+    B -->|No| D{Public / health path?}
+    D -->|Yes| E["🔵 PUBLIC"]
+    D -->|No| F{High confidence?}
+    F -->|Yes| G["🔴 EXPOSED"]
+    F -->|No| H["🟡 UNKNOWN — fail-safe"]
 ```
 
 Full details in the [Architecture explanation](./docs/explanation/architecture.md).
