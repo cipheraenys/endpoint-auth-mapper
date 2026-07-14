@@ -25,6 +25,8 @@ env/
 
 # --- Kilo agent workspace ---------------------------------------------------
 .kilo/
+.agents/
+skills-lock.json
 
 # --- OS / editor noise ------------------------------------------------------
 .DS_Store
