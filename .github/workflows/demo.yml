@@ -19,16 +19,24 @@ jobs:
       - name: Install package
         run: pip install -e .
 
-      - name: Install ffmpeg
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
-
       - name: Record demo GIF
-        uses: charmbracelet/vhs-action@v1
-        with:
-          path: docs/assets/demo.tape
+        run: |
+          docker run --rm \
+            -v $PWD:/vhs \
+            -v $PWD/tests/fixtures:/vhs/tests/fixtures \
+            -w /vhs \
+            ghcr.io/charmbracelet/vhs docs/assets/demo.tape
 
       - name: Upload GIF artifact
         uses: actions/upload-artifact@v4
         with:
           name: demo-gif
           path: docs/assets/demo.gif
+
+      - name: Commit and push GIF
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/assets/demo.gif
+          git commit -m "docs: generate TUI demo GIF" || echo "No changes to commit"
+          git push
