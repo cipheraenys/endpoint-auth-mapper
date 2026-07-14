@@ -12,6 +12,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `--strict-coverage` for CI assurance runs.
 - Additive evidence report `2.0` schema, deterministic serializer, semantic
   fingerprints, SARIF mapping, and labeled legacy compatibility artifact.
+- Internal adapter explanation view and generic cross-framework contract
+  challenge fixtures; no production framework capability promotion.
 
 ### Changed
 - File-wide auth signals no longer prove any bundled endpoint protected.

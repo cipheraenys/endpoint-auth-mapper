@@ -82,3 +82,39 @@ model.ScanResult (Findings, coverage, errors, summary)
 
 - **Not a single script:** Separation makes the fail-safe policy, safety primitives, and language rules independently auditable and testable — critical for a security tool.
 - **Not microservices:** There is no runtime to distribute. A monolith ships as one auditable artifact with zero network surface, which aligns perfectly with a secure, local-analysis posture.
+
+## V2 evidence contracts
+
+`authmapper.core.v2` is an additive production namespace. It does not replace
+legacy engine contracts during M2.
+
+```text
+adapter artifact (facts, scopes, relations, diagnostics, coverage)
+        |
+        v
+semantic rules (typed evidence meaning)
+        |
+        v
+validated evidence graph
+        |
+        v
+pure resolver (endpoint verdicts and proofs)
+        |
+        v
+evidence JSON / SARIF / explanation clients
+```
+
+Adapters cannot emit verdict or severity. Resolver requires associated
+enforcement proof for `GUARDED`, complete relevant coverage for `UNGARDED`, and
+resolved public-policy proof for `DECLARED_PUBLIC`; ambiguity remains
+`UNRESOLVED`. Coverage records never become synthetic endpoints.
+
+Generic subject kinds cover route calls, object properties, handlers, callable
+parameters, type annotations, decorators, middleware, policies, and public
+declarations. Synthetic challenge tests represent Express composition, Hono
+mounted sub-apps, Bun route-map properties, Axum nested layers, and Rocket typed
+request guards without framework-named core fields.
+
+Adapter explanation is an inspection view over activation evidence, ownership,
+capabilities, applied semantic rules, and diagnostics. It is not another
+analysis engine.

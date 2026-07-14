@@ -1,0 +1,79 @@
+{
+  "hono_mounted_subapp": {
+    "subjects": [
+      ["subject:route", "route_call", "users.get"],
+      ["subject:subapp", "handler", "users"]
+    ],
+    "facts": [
+      ["fact:route", "endpoint_declaration", "subject:route", "GET", "/api/users"]
+    ],
+    "scopes": [
+      ["scope:route", "route", "subject:route"],
+      ["scope:subapp", "component", "subject:subapp"]
+    ],
+    "relations": [
+      ["relation:mount", "composes", "scope:subapp", "scope:route", 1]
+    ],
+    "expected_subject_kinds": ["handler", "route_call"]
+  },
+  "bun_route_map": {
+    "subjects": [
+      ["subject:handler", "handler", "getAccount"],
+      ["subject:property", "object_property", "/account"]
+    ],
+    "facts": [
+      ["fact:route", "endpoint_declaration", "subject:property", "GET", "/account"]
+    ],
+    "scopes": [
+      ["scope:handler", "handler", "subject:handler"],
+      ["scope:route", "route", "subject:property"]
+    ],
+    "relations": [
+      ["relation:handler", "references", "scope:route", "scope:handler", 1]
+    ],
+    "expected_subject_kinds": ["handler", "object_property"]
+  },
+  "axum_nested_layer": {
+    "subjects": [
+      ["subject:layer", "policy", "RequireAuthorizationLayer"],
+      ["subject:route", "route_call", "route"],
+      ["subject:router", "handler", "Router"]
+    ],
+    "facts": [
+      ["fact:layer", "routing_predicate", "subject:layer", null, null],
+      ["fact:route", "endpoint_declaration", "subject:route", "GET", "/api/users"]
+    ],
+    "scopes": [
+      ["scope:route", "route", "subject:route"],
+      ["scope:router", "component", "subject:router"]
+    ],
+    "relations": [
+      ["relation:layer", "contains", "scope:router", "fact:layer", 2],
+      ["relation:nest", "composes", "scope:router", "scope:route", 1]
+    ],
+    "expected_subject_kinds": ["handler", "policy", "route_call"]
+  },
+  "rocket_typed_guard": {
+    "subjects": [
+      ["subject:handler", "handler", "account"],
+      ["subject:parameter", "callable_parameter", "user"],
+      ["subject:route", "decorator", "get"],
+      ["subject:type", "type_annotation", "AuthenticatedUser"]
+    ],
+    "facts": [
+      ["fact:guard", "auth_enforcement", "subject:type", null, null],
+      ["fact:route", "endpoint_declaration", "subject:route", "GET", "/account"]
+    ],
+    "scopes": [
+      ["scope:handler", "handler", "subject:handler"],
+      ["scope:route", "route", "subject:route"]
+    ],
+    "relations": [
+      ["relation:parameter", "contains", "scope:handler", "subject:parameter", 1],
+      ["relation:type", "references", "subject:parameter", "subject:type", 2]
+    ],
+    "association": ["association:guard", "fact:route", "fact:guard", "scope:handler"],
+    "proof": ["proof:guard", "auth_enforcement", "fact:route", "fact:guard", "association:guard"],
+    "expected_subject_kinds": ["callable_parameter", "decorator", "handler", "type_annotation"]
+  }
+}

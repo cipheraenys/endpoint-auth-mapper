@@ -14,6 +14,13 @@ from .contracts import (
     REPORT_SCHEMA_VERSION,
     SARIF_MAPPING_VERSION,
 )
+from .explain import (
+    EXPLAIN_ADAPTER_VIEW_VERSION,
+    AdapterExplanation,
+    CapabilityExplanation,
+    explain_adapter_document,
+    render_adapter_explanation,
+)
 from .fingerprint import Fingerprint, endpoint_fingerprint, proof_fingerprint
 from .graph import EvidenceGraph, GraphValidationError
 from .manifest import ManifestError, RulepackManifest, load_manifest, parse_manifest
@@ -55,6 +62,7 @@ from .semantics import SemanticKind, SemanticRule
 
 __all__ = [
     "ActivationEvidence",
+    "AdapterExplanation",
     "Adapter",
     "AdapterArtifact",
     "AdapterInput",
@@ -67,11 +75,13 @@ __all__ = [
     "CONFIG_SCHEMA_VERSION",
     "CoverageRecord",
     "CoverageStatus",
+    "CapabilityExplanation",
     "Diagnostic",
     "DiagnosticLevel",
     "EndpointResolution",
     "EndpointVerdict",
     "EXCEPTION_SCHEMA_VERSION",
+    "EXPLAIN_ADAPTER_VIEW_VERSION",
     "EvidenceAssociation",
     "EvidenceGraph",
     "EvidenceReport",
@@ -104,10 +114,12 @@ __all__ = [
     "SubjectKind",
     "UnresolvedRecord",
     "endpoint_fingerprint",
+    "explain_adapter_document",
     "legacy_compatibility_document",
     "load_manifest",
     "parse_manifest",
     "proof_fingerprint",
     "report_document",
+    "render_adapter_explanation",
     "resolve_endpoints",
 ]
