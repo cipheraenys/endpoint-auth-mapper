@@ -17,7 +17,7 @@ class ASTAnalyzer(Analyzer):
         self._tree_sitter_available = False
         self._parsers: dict[str, Any] = {}
         try:
-            import tree_sitter
+            import tree_sitter  # type: ignore[import-not-found]
             self._tree_sitter = tree_sitter
             self._tree_sitter_available = True
         except ImportError:
@@ -119,13 +119,13 @@ class ASTAnalyzer(Analyzer):
             state = AuthState.EXPOSED
             confidence = Confidence.HIGH
             severity = Severity.HIGH
-            evidence = []
-            
+            finding_evidence: list[Evidence] = []
+
             if file_guards:
                 state = AuthState.PROTECTED
                 confidence = Confidence.HIGH
                 severity = Severity.INFO
-                evidence.extend(file_guards)
+                finding_evidence.extend(file_guards)
             
             # Check for generic suppressions or logic (for now, simplified)
             finding = Finding(
@@ -133,7 +133,7 @@ class ASTAnalyzer(Analyzer):
                 auth_state=state,
                 confidence=confidence,
                 severity=severity,
-                evidence=tuple(evidence),
+                evidence=tuple(finding_evidence),
                 rationale=f"AST discovered via {rule_id}",
             )
             findings.append(finding)

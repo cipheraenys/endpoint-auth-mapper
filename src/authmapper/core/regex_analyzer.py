@@ -7,7 +7,7 @@ from .analyzer import Analyzer
 from .classifier import classify_state, looks_public, severity_for
 from .model import AuthState, Confidence, Endpoint, Evidence, Finding
 from .rulepack import ENDPOINT_MODEL_FILE, SCOPE_SAME_LINE, RulePack
-from .safety import SafeMatcher, redact
+from .safety import MatchProxy, SafeMatcher, redact
 from .walker import SourceFile
 
 _SUPPRESSION_RE = re.compile(r"authmap:ignore(?:\s+reason=(?P<reason>[^\n]+))?", re.IGNORECASE)
@@ -170,12 +170,12 @@ class RegexAnalyzer(Analyzer):
 
     # -- small helpers -------------------------------------------------------
 
-    def _first(self, pattern: re.Pattern[str], text: str) -> re.Match[str] | None:
+    def _first(self, pattern: re.Pattern[str], text: str) -> MatchProxy | re.Match[str] | None:
         matches = self._matcher.finditer(pattern, text)
         return matches[0] if matches else None
 
     @staticmethod
-    def _group(match: re.Match[str], group: int | None) -> str | None:
+    def _group(match: MatchProxy | re.Match[str], group: int | None) -> str | None:
         if group is None:
             return None
         try:

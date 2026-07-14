@@ -181,11 +181,12 @@ class SafeMatcher:
         self._teardown_worker()
         self._task_q = self._ctx.Queue()
         self._result_q = self._ctx.Queue()
-        self._worker = self._ctx.Process(
+        self._worker = self._ctx.Process(  # type: ignore[assignment]
             target=_worker_loop,
             args=(self._task_q, self._result_q),
             daemon=True,
         )
+        assert self._worker is not None
         self._worker.start()
 
     def _teardown_worker(self) -> None:
