@@ -84,9 +84,16 @@ def run_express_evidence_scan(project_root: Path, command_line: tuple[str, ...])
                     "nearest package declares Express and source resolves Express binding",
                 )
             )
+    maturity = {
+        "auth_association": CapabilityMaturity.VERIFIED,
+        "endpoint_discovery": CapabilityMaturity.VERIFIED,
+        "public_override": CapabilityMaturity.EXPERIMENTAL,
+        "route_composition": CapabilityMaturity.VERIFIED,
+        "scope_resolution": CapabilityMaturity.VERIFIED,
+    }
     capabilities = tuple(
-        CapabilityExplanation(item, CapabilityMaturity.EXPERIMENTAL)
-        for item in sorted({record.capability.value for record in graph.coverage})
+        CapabilityExplanation(item, maturity[item])
+        for item in sorted(maturity)
     )
     explanation = AdapterExplanation(
         adapter.id,

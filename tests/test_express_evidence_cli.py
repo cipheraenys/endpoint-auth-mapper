@@ -44,6 +44,16 @@ def test_explanation_exposes_activation_and_rules_without_changing_report(tmp_pa
     assert code == 0
     assert document["adapter_explanation"]["applicability"]["state"] == "active"
     assert document["adapter_explanation"]["applied_rule_ids"] == ["express.passport.authenticate"]
+    assert {
+        item["capability"]: item["maturity"]
+        for item in document["adapter_explanation"]["capabilities"]
+    } == {
+        "auth_association": "verified",
+        "endpoint_discovery": "verified",
+        "public_override": "experimental",
+        "route_composition": "verified",
+        "scope_resolution": "verified",
+    }
     assert document["evidence_report"]["endpoint_resolutions"][0]["verdict"] == "GUARDED"
 
 
