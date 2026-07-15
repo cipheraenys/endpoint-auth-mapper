@@ -13,6 +13,7 @@ Exit codes (CI contract):
 from __future__ import annotations
 
 import argparse
+import json
 import math
 import sys
 from collections.abc import Sequence
@@ -21,8 +22,12 @@ from pathlib import Path
 from . import __version__
 from .app.baseline import build_baseline
 from .app.config import ConfigError, RunConfig
+from .app.evidence_runner import run_express_evidence_scan
 from .app.runner import EXIT_ERROR, Runner, RunnerError
+from .core.v2 import explain_adapter_document
 from .core.walker import resolve_project_root
+from .reporters.v2_json_reporter import render_evidence_json
+from .reporters.v2_sarif_reporter import render_evidence_sarif
 
 _DEFAULT_REPORT_DIR = ".security-reports"
 _FAIL_ON_VALUES = ("EXPOSED", "UNKNOWN", "CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO")
@@ -46,6 +51,8 @@ def build_parser() -> argparse.ArgumentParser:
         epilog="This tool performs no network activity and never executes target code.",
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
+    parser.add_argument("--evidence-scan", choices=("express",), help="run explicit v2 parser-backed evidence scan")
+    parser.add_argument("--explain-adapter", action="store_true", help="include adapter explanation in v2 JSON")
     parser.add_argument(
         "--project", "-p", default=".", help="Path to the project root to analyze (default: .)"
     )
@@ -168,6 +175,16 @@ def _build_config(args: argparse.Namespace) -> RunConfig:
 
 
 def _validate_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
+    if args.explain_adapter and not args.evidence_scan:
+        parser.error("--explain-adapter requires --evidence-scan")
+    if args.evidence_scan:
+        incompatible = (args.fail_on, args.baseline, args.write_baseline, args.experimental_ast, args.rulepacks)
+        if any(bool(value) for value in incompatible):
+            parser.error(
+                "--evidence-scan cannot be combined with legacy policy, baseline, AST, or rulepack flags"
+            )
+        if args.format == "table":
+            parser.error("--evidence-scan requires --format json or --format sarif")
     if args.write_baseline is None:
         return
     conflicts = [
@@ -187,6 +204,35 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     _validate_args(parser, args)
+
+    if args.evidence_scan == "express":
+        try:
+            result = run_express_evidence_scan(
+                Path(args.project), tuple(["authmap", *(argv if argv is not None else sys.argv[1:])])
+            )
+            if args.format == "sarif":
+                if args.explain_adapter:
+                    parser.error("--explain-adapter is supported only with --format json")
+                output = render_evidence_sarif(result.report)
+            elif args.explain_adapter:
+                output = json.dumps(
+                    {
+                        "adapter_explanation": explain_adapter_document(result.explanation),
+                        "evidence_report": json.loads(render_evidence_json(result.report)),
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+            else:
+                output = render_evidence_json(result.report)
+            if args.output:
+                Path(args.output).write_text(output + "\n", encoding="utf-8")
+            if not args.quiet:
+                print(output)
+            return 0
+        except (OSError, ValueError) as exc:
+            print(f"authmap: evidence scan failed: {exc}", file=sys.stderr)
+            return EXIT_ERROR
 
     try:
         config = _build_config(args)

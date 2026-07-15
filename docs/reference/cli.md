@@ -1,5 +1,9 @@
 # Command-Line Interface
 
+Experimental parser-backed Express v2 mode is documented in
+[`express-evidence-scan.md`](express-evidence-scan.md). It is opt-in and does not
+change default legacy scan behavior.
+
 ## Syntax
 
 ```text
