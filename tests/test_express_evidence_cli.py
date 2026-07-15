@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
@@ -20,6 +21,40 @@ def _project(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     return tmp_path
+
+
+def _policy(tmp_path: Path) -> Path:
+    path = tmp_path / "evidence-policy.json"
+    capabilities = (
+        "auth_association",
+        "endpoint_discovery",
+        "route_composition",
+        "scope_resolution",
+    )
+    path.write_text(
+        json.dumps(
+            {
+                "$schema": "https://authmap.dev/schemas/evidence-policy-1.0.json",
+                "schema_version": "1.0",
+                "id": "default.assurance",
+                "fail_on_unguarded": True,
+                "fail_on_unresolved": False,
+                "fail_on_incomplete_coverage": True,
+                "requirements": [
+                    {
+                        "id": f"express.{capability}",
+                        "adapter_id": "express",
+                        "adapter_version": "0.1.0",
+                        "capability": capability,
+                        "minimum_maturity": "verified",
+                    }
+                    for capability in capabilities
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    return path
 
 
 def test_explicit_json_scan_runs_adapter_to_v2_report(tmp_path: Path, capsys):
@@ -65,6 +100,148 @@ def test_evidence_scan_rejects_legacy_policy_flags(tmp_path: Path):
                 "--fail-on", "EXPOSED",
             ]
         )
+
+
+def test_evidence_policy_gate_returns_satisfied_and_violation_exit_codes(tmp_path: Path, capsys):
+    root = _project(tmp_path)
+    policy = _policy(tmp_path)
+
+    assert main([
+        "--project", str(root), "--evidence-scan", "express", "--format", "json",
+        "--evidence-policy", str(policy), "--quiet",
+    ]) == 0
+
+    root.joinpath("app.js").write_text(
+        'const express = require("express");\nconst app = express();\napp.get("/admin", handler);\n',
+        encoding="utf-8",
+    )
+    assert main([
+        "--project", str(root), "--evidence-scan", "express", "--format", "json",
+        "--evidence-policy", str(policy), "--quiet",
+    ]) == 1
+    assert capsys.readouterr().err == ""
+
+
+def test_policy_gate_json_and_sarif_expose_same_exit_class(tmp_path: Path, capsys):
+    root = _project(tmp_path)
+    root.joinpath("app.js").write_text(
+        'const express = require("express");\nconst app = express();\napp.get("/admin", handler);\n',
+        encoding="utf-8",
+    )
+    policy = _policy(tmp_path)
+    common = [
+        "--project", str(root), "--evidence-scan", "express", "--evidence-policy", str(policy),
+    ]
+
+    assert main([*common, "--format", "json"]) == 1
+    json_document = json.loads(capsys.readouterr().out)
+    assert json_document["gate"]["exit_class"] == "violation"
+    assert json_document["evidence_report"]["endpoint_resolutions"][0]["verdict"] == "UNGARDED"
+
+    assert main([*common, "--format", "sarif"]) == 1
+    sarif_document = json.loads(capsys.readouterr().out)
+    assert sarif_document["runs"][0]["properties"]["authmapGate"]["exitClass"] == "violation"
+    assert any(item["ruleId"] == "AMGATE-UNGUARDED" for item in sarif_document["runs"][0]["results"])
+
+
+def test_policy_report_write_failure_returns_setup_error(tmp_path: Path, capsys):
+    root = _project(tmp_path)
+    policy = _policy(tmp_path)
+    output = tmp_path / "missing" / "gate.json"
+
+    code = main([
+        "--project", str(root), "--evidence-scan", "express", "--format", "json",
+        "--evidence-policy", str(policy), "--output", str(output), "--quiet",
+    ])
+
+    assert code == 2
+    assert "evidence scan failed" in capsys.readouterr().err
+
+
+def test_invalid_evidence_policy_returns_setup_error_before_gate(tmp_path: Path, capsys):
+    root = _project(tmp_path)
+    policy = _policy(tmp_path)
+    policy.write_text('{"schema_version":"2.0"}', encoding="utf-8")
+
+    code = main([
+        "--project", str(root), "--evidence-scan", "express", "--format", "json",
+        "--evidence-policy", str(policy), "--quiet",
+    ])
+
+    assert code == 2
+    assert "invalid evidence policy" in capsys.readouterr().err
+
+
+def test_evidence_policy_options_require_explicit_evidence_scan(tmp_path: Path):
+    policy = _policy(tmp_path)
+
+    with pytest.raises(SystemExit, match="2"):
+        main(["--evidence-policy", str(policy)])
+
+
+def test_exception_audit_command_returns_satisfied_and_setup_exit_codes(tmp_path: Path):
+    root = _project(tmp_path)
+    root.joinpath("app.js").write_text(
+        'const express = require("express");\nconst app = express();\napp.get("/admin", handler);\n',
+        encoding="utf-8",
+    )
+    policy = _policy(tmp_path)
+    from authmapper.app.evidence_runner import run_express_evidence_scan
+    from authmapper.core.v2 import endpoint_fingerprint
+
+    report = run_express_evidence_scan(root, ("authmap",)).report
+    endpoint = next(item for item in report.graph.facts if item.path == "/admin")
+    exceptions = tmp_path / "exceptions.json"
+    today = date.today()
+    exceptions.write_text(
+        json.dumps(
+            {
+                "$schema": "https://authmap.dev/schemas/evidence-exceptions-1.0.json",
+                "schema_version": "1.0",
+                "exceptions": [
+                    {
+                        "id": "exception.admin",
+                        "reason": "migration",
+                        "owner": "security",
+                        "reference": "SEC-123",
+                        "created_on": (today - timedelta(days=1)).isoformat(),
+                        "expires_on": (today + timedelta(days=1)).isoformat(),
+                        "review_on": None,
+                        "authorizing_policy_id": "default.assurance",
+                        "identity": {
+                            "method": "GET",
+                            "path": "/admin",
+                            "adapter_id": "express",
+                            "adapter_version": "0.1.0",
+                            "capability": "auth_association",
+                            "maturity": "verified",
+                            "endpoint_fingerprint_algorithm": "authmap.endpoint.v1",
+                            "endpoint_fingerprint": endpoint_fingerprint(endpoint).value,
+                            "violation": "unguarded",
+                            "policy_id": "default.assurance",
+                        },
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    args = [
+        "--project", str(root), "--evidence-scan", "express", "--format", "json",
+        "--evidence-policy", str(policy), "--audit-exceptions", str(exceptions), "--quiet",
+    ]
+
+    assert main(args) == 0
+    document = json.loads(exceptions.read_text(encoding="utf-8"))
+    document["exceptions"][0]["created_on"] = "1999-01-01"
+    document["exceptions"][0]["expires_on"] = "2000-01-01"
+    exceptions.write_text(json.dumps(document), encoding="utf-8")
+    assert main(args) == 2
+
+
+def test_exception_audit_requires_evidence_policy():
+    with pytest.raises(SystemExit, match="2"):
+        main(["--audit-exceptions", "exceptions.json"])
 
 
 def test_evidence_scan_excludes_dependency_directories(tmp_path: Path, capsys):

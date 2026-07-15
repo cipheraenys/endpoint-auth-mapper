@@ -17,15 +17,26 @@ import json
 import math
 import sys
 from collections.abc import Sequence
+from dataclasses import replace
+from datetime import datetime, timezone
 from pathlib import Path
 
 from . import __version__
 from .app.baseline import build_baseline
 from .app.config import ConfigError, RunConfig
+from .app.evidence_gate import classify_gate_exit, evaluate_evidence_gate
 from .app.evidence_runner import run_express_evidence_scan
+from .app.exception_audit import audit_evidence_exceptions
 from .app.runner import EXIT_ERROR, Runner, RunnerError
-from .core.v2 import explain_adapter_document
+from .core.v2 import (
+    EvidenceExceptionError,
+    EvidencePolicyError,
+    explain_adapter_document,
+    load_evidence_exceptions,
+    load_evidence_policy,
+)
 from .core.walker import resolve_project_root
+from .reporters.gate_audit import render_gate_audit_json, render_gate_audit_sarif
 from .reporters.v2_json_reporter import render_evidence_json
 from .reporters.v2_sarif_reporter import render_evidence_sarif
 
@@ -52,6 +63,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     parser.add_argument("--evidence-scan", choices=("express",), help="run explicit v2 parser-backed evidence scan")
+    parser.add_argument("--evidence-policy", metavar="PATH", help="apply a versioned policy to an evidence scan")
+    parser.add_argument(
+        "--audit-exceptions",
+        metavar="PATH",
+        help="audit exact exceptions against an evidence policy and scan",
+    )
     parser.add_argument("--explain-adapter", action="store_true", help="include adapter explanation in v2 JSON")
     parser.add_argument(
         "--project", "-p", default=".", help="Path to the project root to analyze (default: .)"
@@ -177,6 +194,10 @@ def _build_config(args: argparse.Namespace) -> RunConfig:
 def _validate_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
     if args.explain_adapter and not args.evidence_scan:
         parser.error("--explain-adapter requires --evidence-scan")
+    if args.evidence_policy and not args.evidence_scan:
+        parser.error("--evidence-policy requires --evidence-scan")
+    if args.audit_exceptions and not args.evidence_policy:
+        parser.error("--audit-exceptions requires --evidence-policy")
     if args.evidence_scan:
         incompatible = (args.fail_on, args.baseline, args.write_baseline, args.experimental_ast, args.rulepacks)
         if any(bool(value) for value in incompatible):
@@ -210,27 +231,55 @@ def main(argv: Sequence[str] | None = None) -> int:
             result = run_express_evidence_scan(
                 Path(args.project), tuple(["authmap", *(argv if argv is not None else sys.argv[1:])])
             )
+            exit_code = 0
+            if args.evidence_policy:
+                policy = load_evidence_policy(Path(args.evidence_policy).expanduser().resolve())
+                gate_run = evaluate_evidence_gate(result.report, policy)
+                exit_code = gate_run.exit_class.code
+                if args.audit_exceptions:
+                    exceptions = load_evidence_exceptions(Path(args.audit_exceptions).expanduser().resolve())
+                    audit_result = audit_evidence_exceptions(
+                        result.report,
+                        policy,
+                        exceptions,
+                        now=datetime.now(timezone.utc),
+                    )
+                    gate_run = replace(
+                        gate_run,
+                        gate=audit_result.gate,
+                        exit_class=classify_gate_exit(audit_result.gate),
+                        exception_audit=audit_result.audit,
+                    )
+                    exit_code = gate_run.exit_class.code
             if args.format == "sarif":
                 if args.explain_adapter:
                     parser.error("--explain-adapter is supported only with --format json")
-                output = render_evidence_sarif(result.report)
-            elif args.explain_adapter:
-                output = json.dumps(
-                    {
-                        "adapter_explanation": explain_adapter_document(result.explanation),
-                        "evidence_report": json.loads(render_evidence_json(result.report)),
-                    },
-                    indent=2,
-                    sort_keys=True,
+                evidence_sarif = json.loads(render_evidence_sarif(result.report))
+                output = (
+                    render_gate_audit_sarif(evidence_sarif, result.report, policy, gate_run)
+                    if args.evidence_policy
+                    else json.dumps(evidence_sarif, indent=2, sort_keys=True)
                 )
+            elif args.explain_adapter:
+                document = (
+                    json.loads(render_gate_audit_json(result.report, policy, gate_run))
+                    if args.evidence_policy
+                    else {"evidence_report": json.loads(render_evidence_json(result.report))}
+                )
+                document["adapter_explanation"] = explain_adapter_document(result.explanation)
+                output = json.dumps(document, indent=2, sort_keys=True)
             else:
-                output = render_evidence_json(result.report)
+                output = (
+                    render_gate_audit_json(result.report, policy, gate_run)
+                    if args.evidence_policy
+                    else render_evidence_json(result.report)
+                )
             if args.output:
                 Path(args.output).write_text(output + "\n", encoding="utf-8")
             if not args.quiet:
                 print(output)
-            return 0
-        except (OSError, ValueError) as exc:
+            return exit_code
+        except (EvidenceExceptionError, EvidencePolicyError, OSError, ValueError) as exc:
             print(f"authmap: evidence scan failed: {exc}", file=sys.stderr)
             return EXIT_ERROR
 

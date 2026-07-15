@@ -56,7 +56,8 @@ class EvidenceGraph:
         scope_ids = {item.id for item in self.scopes}
         relation_ids = {item.id for item in self.relations}
         association_ids = {item.id for item in self.associations}
-        provenance_ids = {item.id for item in self.capability_provenance}
+        provenance_by_id = {item.id: item for item in self.capability_provenance}
+        provenance_ids = set(provenance_by_id)
 
         for subject in self.subjects:
             self._require_optional(subject.parent_id, subject_ids, subject.id, "parent subject")
@@ -94,6 +95,8 @@ class EvidenceGraph:
         for record in self.coverage:
             self._require(record.target_id, set(by_id), record.id, "target")
             self._require(record.provenance_id, provenance_ids, record.id, "capability provenance")
+            if provenance_by_id[record.provenance_id].capability is not record.capability:
+                raise GraphValidationError(f"{record.id}: coverage capability must match provenance")
 
         derivations = {
             entity.id: entity.derived_from

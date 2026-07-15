@@ -1,13 +1,37 @@
 # Command-Line Interface
 
-Experimental parser-backed Express v2 mode is documented in
+Parser-backed Express v2 mode is documented in
 [`express-evidence-scan.md`](express-evidence-scan.md). It is opt-in and does not
 change default legacy scan behavior.
+
+## Evidence Policy Gate
+
+```console
+authmap --project . --evidence-scan express --format json --evidence-policy .authmap-policy.json
+authmap --project . --evidence-scan express --format json --evidence-policy .authmap-policy.json --audit-exceptions .authmap-exceptions.json
+```
+
+`--evidence-policy` requires `--evidence-scan`. Legacy `--fail-on`, baseline,
+AST, and rulepack options remain incompatible with evidence mode. Exit codes are
+`0` when policy is satisfied, `1` for unsuppressed policy violations, and `2`
+for invalid policy, required capability, adapter, report, analysis, or invocation
+failure. The shared application use case computes gate result; CLI adds no policy
+logic.
+
+`--audit-exceptions` requires `--evidence-policy`. Exact consumed exceptions may
+produce exit `0`; expired, review-due, unmatched, invalid, or malformed
+exceptions return exit `2`.
+
+Policy-gated JSON includes policy identity and maturity requirements, ordered
+violations and advisories, exception audit, exit class/code, and unchanged v2
+evidence. Policy-gated SARIF keeps endpoint results visible, adds unsuppressed
+gate violations, and records exception audit under run properties.
 
 ## Syntax
 
 ```text
 authmap [--project PATH] [--format {table,json,sarif}] [--output STEM]
+        [--evidence-scan express] [--evidence-policy PATH]
         [--report-dir DIR] [--fail-on LEVEL] [--min-confidence {low,medium,high}]
         [--exclude NAMES] [--rulepacks DIRS] [--baseline PATH]
         [--write-baseline PATH] [--regex-timeout SECONDS]

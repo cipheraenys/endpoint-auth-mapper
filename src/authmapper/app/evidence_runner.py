@@ -16,6 +16,7 @@ from authmapper.core.v2 import (
     InvocationProvenance,
     OwnershipDecision,
     OwnershipState,
+    ReportedCapability,
     resolve_endpoints,
 )
 
@@ -64,11 +65,6 @@ def run_express_evidence_scan(project_root: Path, command_line: tuple[str, ...])
     applicability = adapter.applicability(input_data)
     artifact = adapter.analyze(input_data)
     graph = build_express_graph(artifact, adapter_version=adapter.version)
-    report = EvidenceReport(
-        graph,
-        resolve_endpoints(graph),
-        InvocationProvenance(command_line, str(root), __version__),
-    )
     ownership = []
     for path in paths:
         relative = path.relative_to(root).as_posix()
@@ -94,6 +90,16 @@ def run_express_evidence_scan(project_root: Path, command_line: tuple[str, ...])
     capabilities = tuple(
         CapabilityExplanation(item, maturity[item])
         for item in sorted(maturity)
+    )
+    reported_capabilities = tuple(
+        ReportedCapability(adapter.id, adapter.version, item, maturity[item], applicability.state)
+        for item in sorted(maturity)
+    )
+    report = EvidenceReport(
+        graph,
+        resolve_endpoints(graph),
+        InvocationProvenance(command_line, str(root), __version__),
+        reported_capabilities,
     )
     explanation = AdapterExplanation(
         adapter.id,

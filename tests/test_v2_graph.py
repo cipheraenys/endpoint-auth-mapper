@@ -5,6 +5,10 @@ from __future__ import annotations
 import pytest
 
 from authmapper.core.v2 import (
+    Capability,
+    CapabilityProvenance,
+    CoverageRecord,
+    CoverageStatus,
     EvidenceAssociation,
     EvidenceGraph,
     Fact,
@@ -93,4 +97,34 @@ def test_graph_rejects_derivation_cycles():
     )
 
     with pytest.raises(GraphValidationError, match="acyclic"):
+        graph.validate()
+
+
+def test_graph_rejects_coverage_capability_that_does_not_match_provenance():
+    graph = _valid_graph()
+    graph = EvidenceGraph(
+        subjects=graph.subjects,
+        facts=graph.facts,
+        scopes=graph.scopes,
+        associations=graph.associations,
+        capability_provenance=(
+            CapabilityProvenance(
+                "provenance:auth",
+                Capability.AUTH_ASSOCIATION,
+                "express",
+                "0.1.0",
+            ),
+        ),
+        coverage=(
+            CoverageRecord(
+                "coverage:route",
+                "fact:route",
+                Capability.ENDPOINT_DISCOVERY,
+                CoverageStatus.ANALYZED,
+                "provenance:auth",
+            ),
+        ),
+    )
+
+    with pytest.raises(GraphValidationError, match="must match provenance"):
         graph.validate()

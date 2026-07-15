@@ -1,0 +1,14 @@
+{
+  "$schema": "https://authmap.dev/schemas/evidence-policy-1.0.json",
+  "schema_version": "1.0",
+  "id": "ci.express.assurance",
+  "fail_on_unguarded": true,
+  "fail_on_unresolved": false,
+  "fail_on_incomplete_coverage": true,
+  "requirements": [
+    { "id": "express.auth", "adapter_id": "express", "adapter_version": "0.1.0", "capability": "auth_association", "minimum_maturity": "verified" },
+    { "id": "express.discovery", "adapter_id": "express", "adapter_version": "0.1.0", "capability": "endpoint_discovery", "minimum_maturity": "verified" },
+    { "id": "express.composition", "adapter_id": "express", "adapter_version": "0.1.0", "capability": "route_composition", "minimum_maturity": "verified" },
+    { "id": "express.scope", "adapter_id": "express", "adapter_version": "0.1.0", "capability": "scope_resolution", "minimum_maturity": "verified" }
+  ]
+}
