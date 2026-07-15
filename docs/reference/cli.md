@@ -8,6 +8,7 @@ change default legacy scan behavior.
 
 ```console
 authmap --project . --evidence-scan express --format json --evidence-policy .authmap-policy.json
+authmap --project . --evidence-scan express --format json --evidence-policy .authmap-policy.json --audit-exceptions .authmap-exceptions.json
 ```
 
 `--evidence-policy` requires `--evidence-scan`. Legacy `--fail-on`, baseline,
@@ -16,6 +17,10 @@ AST, and rulepack options remain incompatible with evidence mode. Exit codes are
 for invalid policy, required capability, adapter, report, analysis, or invocation
 failure. The shared application use case computes gate result; CLI adds no policy
 logic.
+
+`--audit-exceptions` requires `--evidence-policy`. Exact consumed exceptions may
+produce exit `0`; expired, review-due, unmatched, invalid, or malformed
+exceptions return exit `2`.
 
 ## Syntax
 

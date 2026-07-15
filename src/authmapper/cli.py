@@ -17,6 +17,7 @@ import json
 import math
 import sys
 from collections.abc import Sequence
+from datetime import datetime, timezone
 from pathlib import Path
 
 from . import __version__
@@ -24,10 +25,14 @@ from .app.baseline import build_baseline
 from .app.config import ConfigError, RunConfig
 from .app.evidence_gate import evaluate_evidence_gate
 from .app.evidence_runner import run_express_evidence_scan
+from .app.exception_audit import audit_evidence_exceptions
 from .app.runner import EXIT_ERROR, Runner, RunnerError
 from .core.v2 import (
+    EvidenceExceptionError,
     EvidencePolicyError,
+    ExceptionAuditState,
     explain_adapter_document,
+    load_evidence_exceptions,
     load_evidence_policy,
 )
 from .core.walker import resolve_project_root
@@ -58,6 +63,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     parser.add_argument("--evidence-scan", choices=("express",), help="run explicit v2 parser-backed evidence scan")
     parser.add_argument("--evidence-policy", metavar="PATH", help="apply a versioned policy to an evidence scan")
+    parser.add_argument(
+        "--audit-exceptions",
+        metavar="PATH",
+        help="audit exact exceptions against an evidence policy and scan",
+    )
     parser.add_argument("--explain-adapter", action="store_true", help="include adapter explanation in v2 JSON")
     parser.add_argument(
         "--project", "-p", default=".", help="Path to the project root to analyze (default: .)"
@@ -185,6 +195,8 @@ def _validate_args(parser: argparse.ArgumentParser, args: argparse.Namespace) ->
         parser.error("--explain-adapter requires --evidence-scan")
     if args.evidence_policy and not args.evidence_scan:
         parser.error("--evidence-policy requires --evidence-scan")
+    if args.audit_exceptions and not args.evidence_policy:
+        parser.error("--audit-exceptions requires --evidence-policy")
     if args.evidence_scan:
         incompatible = (args.fail_on, args.baseline, args.write_baseline, args.experimental_ast, args.rulepacks)
         if any(bool(value) for value in incompatible):
@@ -223,6 +235,16 @@ def main(argv: Sequence[str] | None = None) -> int:
                 policy = load_evidence_policy(Path(args.evidence_policy).expanduser().resolve())
                 gate_run = evaluate_evidence_gate(result.report, policy)
                 exit_code = gate_run.exit_class.code
+                if args.audit_exceptions:
+                    exceptions = load_evidence_exceptions(Path(args.audit_exceptions).expanduser().resolve())
+                    audit_result = audit_evidence_exceptions(
+                        result.report,
+                        policy,
+                        exceptions,
+                        now=datetime.now(timezone.utc),
+                    )
+                    audit_failed = any(item.state is not ExceptionAuditState.CONSUMED for item in audit_result.audit)
+                    exit_code = 2 if audit_failed else (1 if audit_result.gate.violations else 0)
             if args.format == "sarif":
                 if args.explain_adapter:
                     parser.error("--explain-adapter is supported only with --format json")
@@ -243,7 +265,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             if not args.quiet:
                 print(output)
             return exit_code
-        except (EvidencePolicyError, OSError, ValueError) as exc:
+        except (EvidenceExceptionError, EvidencePolicyError, OSError, ValueError) as exc:
             print(f"authmap: evidence scan failed: {exc}", file=sys.stderr)
             return EXIT_ERROR
 
