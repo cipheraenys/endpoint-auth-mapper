@@ -9,6 +9,7 @@ from authmapper.core.v2 import (
     EvidenceGateResult,
     EvidencePolicy,
     EvidenceReport,
+    ExceptionAudit,
     GateIssueKind,
     evaluate_evidence_policy,
 )
@@ -32,6 +33,7 @@ class GateExitClass(str, Enum):
 class EvidenceGateRun:
     gate: EvidenceGateResult
     exit_class: GateExitClass
+    exception_audit: tuple[ExceptionAudit, ...] = ()
 
 
 _SETUP_KINDS = frozenset(
@@ -49,10 +51,13 @@ def evaluate_evidence_gate(
 ) -> EvidenceGateRun:
     """Apply one policy to an immutable runner report."""
     gate = evaluate_evidence_policy(policy, report)
+    return EvidenceGateRun(gate, classify_gate_exit(gate))
+
+
+def classify_gate_exit(gate: EvidenceGateResult) -> GateExitClass:
+    """Map a final gate result to the stable process exit class."""
     if any(item.kind in _SETUP_KINDS for item in gate.violations):
-        exit_class = GateExitClass.SETUP_ERROR
-    elif gate.violations:
-        exit_class = GateExitClass.VIOLATION
-    else:
-        exit_class = GateExitClass.SATISFIED
-    return EvidenceGateRun(gate, exit_class)
+        return GateExitClass.SETUP_ERROR
+    if gate.violations:
+        return GateExitClass.VIOLATION
+    return GateExitClass.SATISFIED

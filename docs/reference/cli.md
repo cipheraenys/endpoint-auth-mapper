@@ -22,6 +22,11 @@ logic.
 produce exit `0`; expired, review-due, unmatched, invalid, or malformed
 exceptions return exit `2`.
 
+Policy-gated JSON includes policy identity and maturity requirements, ordered
+violations and advisories, exception audit, exit class/code, and unchanged v2
+evidence. Policy-gated SARIF keeps endpoint results visible, adds unsuppressed
+gate violations, and records exception audit under run properties.
+
 ## Syntax
 
 ```text

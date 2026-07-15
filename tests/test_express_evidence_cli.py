@@ -122,6 +122,42 @@ def test_evidence_policy_gate_returns_satisfied_and_violation_exit_codes(tmp_pat
     assert capsys.readouterr().err == ""
 
 
+def test_policy_gate_json_and_sarif_expose_same_exit_class(tmp_path: Path, capsys):
+    root = _project(tmp_path)
+    root.joinpath("app.js").write_text(
+        'const express = require("express");\nconst app = express();\napp.get("/admin", handler);\n',
+        encoding="utf-8",
+    )
+    policy = _policy(tmp_path)
+    common = [
+        "--project", str(root), "--evidence-scan", "express", "--evidence-policy", str(policy),
+    ]
+
+    assert main([*common, "--format", "json"]) == 1
+    json_document = json.loads(capsys.readouterr().out)
+    assert json_document["gate"]["exit_class"] == "violation"
+    assert json_document["evidence_report"]["endpoint_resolutions"][0]["verdict"] == "UNGARDED"
+
+    assert main([*common, "--format", "sarif"]) == 1
+    sarif_document = json.loads(capsys.readouterr().out)
+    assert sarif_document["runs"][0]["properties"]["authmapGate"]["exitClass"] == "violation"
+    assert any(item["ruleId"] == "AMGATE-UNGUARDED" for item in sarif_document["runs"][0]["results"])
+
+
+def test_policy_report_write_failure_returns_setup_error(tmp_path: Path, capsys):
+    root = _project(tmp_path)
+    policy = _policy(tmp_path)
+    output = tmp_path / "missing" / "gate.json"
+
+    code = main([
+        "--project", str(root), "--evidence-scan", "express", "--format", "json",
+        "--evidence-policy", str(policy), "--output", str(output), "--quiet",
+    ])
+
+    assert code == 2
+    assert "evidence scan failed" in capsys.readouterr().err
+
+
 def test_invalid_evidence_policy_returns_setup_error_before_gate(tmp_path: Path, capsys):
     root = _project(tmp_path)
     policy = _policy(tmp_path)
