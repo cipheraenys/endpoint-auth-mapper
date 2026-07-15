@@ -1,6 +1,6 @@
 # Express Evidence Scan
 
-The Express reference adapter is an explicit Experimental v2 mode. It does not
+The Express reference adapter is an explicit v2 mode. It does not
 replace the legacy default scan or create CI policy decisions.
 
 ```console
@@ -36,8 +36,8 @@ authmap --project . --evidence-scan express --format json --explain-adapter
 - Supported cross-file composition is limited to a package-local default ESM
   import or CJS `module.exports`/`require` router mount. Named imports/exports,
   re-exports, computed module paths, factories, and broader interprocedural
-  composition are unresolved. Route composition and scope resolution remain
-  Experimental.
+  composition are unresolved outside supported static forms. Route composition
+  and scope resolution are Verified within the supported envelope.
 - External declarations have no accepted project policy schema in M3.
   Undeclared auth-looking custom middleware is `UNRESOLVED`. Route names never
   imply publicness.
@@ -52,11 +52,11 @@ source file, and 50 MiB total source bytes.
 Legacy scan remains unchanged when `--evidence-scan` is absent. Legacy policy,
 baseline, AST, and rulepack flags cannot be combined with evidence mode.
 
-The adapter has been exercised against three independent public Express projects,
-but those repositories do not provide the labeled endpoint and auth ground truth
-needed for capability promotion. Every capability remains Experimental and
-non-blocking.
+The independently labeled M3 corpus covers 49 routes across four pinned projects.
+Endpoint discovery, route composition, auth association, scope resolution, and
+coverage accounting are Verified with zero false `GUARDED`. Public override
+remains Experimental because no independent explicit-public label exists.
 
-Continuation evaluation adds six audited route labels. Adapter agreement is
-`6/6` with zero false `GUARDED`; this is not promotion evidence because labeled
+CI policy must consume per-capability maturity and must not treat public override
+as blocking. Verified maturity applies only to the supported envelope above.
 route-population recall and independent positive auth coverage remain incomplete.
