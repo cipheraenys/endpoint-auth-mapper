@@ -60,3 +60,17 @@ remains Experimental because no independent explicit-public label exists.
 CI policy must consume per-capability maturity and must not treat public override
 as blocking. Verified maturity applies only to the supported envelope above.
 route-population recall and independent positive auth coverage remain incomplete.
+
+## Governance Support
+
+| Capability | Governance maturity |
+|---|---|
+| Endpoint discovery | Verified within supported envelope |
+| Route composition | Verified within supported envelope |
+| Scope resolution | Verified within supported envelope |
+| Auth association | Verified within supported envelope |
+| Coverage accounting | Verified within supported envelope |
+| Public override | Experimental, visible, non-blocking |
+
+Default policy blocks only full required Verified evidence. Experimental and
+discovery-only output remain advisory.
