@@ -1,0 +1,29 @@
+name: auth-assurance
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  evidence-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install --require-hashes -r requirements-authmap.txt
+      - name: Gate evidence
+        run: >-
+          authmap --project . --evidence-scan express --format sarif
+          --output authmap.sarif
+          --evidence-policy examples/ci/evidence-policy.json
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: authmap.sarif

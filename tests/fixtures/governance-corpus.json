@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "cases": [
+    { "id": "verified-unguarded", "expected_exit_class": "violation" },
+    { "id": "verified-unresolved", "expected_exit_class": "satisfied" },
+    { "id": "verified-incomplete", "expected_exit_class": "violation" },
+    { "id": "experimental", "expected_exit_class": "satisfied" },
+    { "id": "demoted", "expected_exit_class": "setup_error" },
+    { "id": "inactive", "expected_exit_class": "setup_error" }
+  ]
+}
