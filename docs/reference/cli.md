@@ -1,13 +1,27 @@
 # Command-Line Interface
 
-Experimental parser-backed Express v2 mode is documented in
+Parser-backed Express v2 mode is documented in
 [`express-evidence-scan.md`](express-evidence-scan.md). It is opt-in and does not
 change default legacy scan behavior.
+
+## Evidence Policy Gate
+
+```console
+authmap --project . --evidence-scan express --format json --evidence-policy .authmap-policy.json
+```
+
+`--evidence-policy` requires `--evidence-scan`. Legacy `--fail-on`, baseline,
+AST, and rulepack options remain incompatible with evidence mode. Exit codes are
+`0` when policy is satisfied, `1` for unsuppressed policy violations, and `2`
+for invalid policy, required capability, adapter, report, analysis, or invocation
+failure. The shared application use case computes gate result; CLI adds no policy
+logic.
 
 ## Syntax
 
 ```text
 authmap [--project PATH] [--format {table,json,sarif}] [--output STEM]
+        [--evidence-scan express] [--evidence-policy PATH]
         [--report-dir DIR] [--fail-on LEVEL] [--min-confidence {low,medium,high}]
         [--exclude NAMES] [--rulepacks DIRS] [--baseline PATH]
         [--write-baseline PATH] [--regex-timeout SECONDS]
