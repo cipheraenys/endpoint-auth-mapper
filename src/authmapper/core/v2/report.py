@@ -10,6 +10,7 @@ from .contracts import FACT_GRAPH_VERSION, REPORT_SCHEMA_ID, REPORT_SCHEMA_VERSI
 from .fingerprint import endpoint_fingerprint, proof_fingerprint
 from .graph import EvidenceGraph
 from .model import EndpointResolution, Fact, FactKind
+from .package import ReportedCapability
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,6 +27,7 @@ class EvidenceReport:
     graph: EvidenceGraph
     resolutions: tuple[EndpointResolution, ...]
     invocation: InvocationProvenance
+    capabilities: tuple[ReportedCapability, ...] = ()
 
     def __post_init__(self) -> None:
         self.graph.validate()
@@ -39,6 +41,11 @@ class EvidenceReport:
             raise ValueError("endpoint resolutions must be unique and ordered")
         if set(resolution_ids) != endpoints:
             raise ValueError("endpoint resolutions must cover every graph endpoint exactly once")
+        capability_keys = tuple(
+            (item.adapter_id, item.adapter_version, item.capability) for item in self.capabilities
+        )
+        if capability_keys != tuple(sorted(capability_keys)) or len(capability_keys) != len(set(capability_keys)):
+            raise ValueError("reported capabilities must be unique and ordered")
 
 
 def report_document(report: EvidenceReport) -> dict[str, Any]:

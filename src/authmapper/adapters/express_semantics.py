@@ -122,7 +122,17 @@ def build_express_graph(artifact: AdapterArtifact, *, adapter_version: str) -> E
                     (auth_fact.id,),
                     (association.id,),
                     (relation.id,),
-                    tuple(sorted((association.id, auth_fact.id, endpoint.id, relation.id))),
+                    tuple(
+                        sorted(
+                            (
+                                association.id,
+                                auth_fact.id,
+                                endpoint.id,
+                                "provenance:express:auth_association",
+                                relation.id,
+                            )
+                        )
+                    ),
                 )
                 facts.append(auth_fact)
                 associations.append(association)
