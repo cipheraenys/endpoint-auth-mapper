@@ -31,6 +31,7 @@ class GateDisposition(str, Enum):
 
 class GateIssueKind(str, Enum):
     ANALYSIS_ERROR = "analysis_error"
+    EXCEPTION_AUDIT = "exception_audit"
     UNGUARDED = "unguarded"
     UNRESOLVED = "unresolved"
     PUBLIC_DECLARATION = "public_declaration"

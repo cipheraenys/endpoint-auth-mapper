@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://authmap.dev/schemas/evidence-exceptions-1.0.json",
+  "title": "Authmap evidence exceptions 1.0",
+  "type": "object",
+  "properties": {
+    "$schema": { "const": "https://authmap.dev/schemas/evidence-exceptions-1.0.json" },
+    "schema_version": { "const": "1.0" },
+    "exceptions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$" },
+          "reason": { "type": "string", "minLength": 1 },
+          "owner": { "type": "string", "minLength": 1 },
+          "reference": { "type": "string", "minLength": 1 },
+          "created_on": { "type": "string", "format": "date" },
+          "expires_on": { "type": ["string", "null"], "format": "date" },
+          "review_on": { "type": ["string", "null"], "format": "date" },
+          "authorizing_policy_id": { "type": "string", "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$" },
+          "identity": {
+            "type": "object",
+            "properties": {
+              "method": { "type": "string", "pattern": "^[A-Z]+$" },
+              "path": { "type": "string", "pattern": "^/" },
+              "adapter_id": { "type": "string", "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$" },
+              "adapter_version": { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$" },
+              "capability": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+              "maturity": { "enum": ["experimental", "verified"] },
+              "endpoint_fingerprint_algorithm": { "const": "authmap.endpoint.v1" },
+              "endpoint_fingerprint": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "violation": { "enum": ["unguarded", "unresolved"] },
+              "policy_id": { "type": "string", "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$" }
+            },
+            "required": [
+              "method", "path", "adapter_id", "adapter_version", "capability", "maturity",
+              "endpoint_fingerprint_algorithm", "endpoint_fingerprint", "violation", "policy_id"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id", "reason", "owner", "reference", "created_on", "expires_on", "review_on",
+          "authorizing_policy_id", "identity"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["$schema", "schema_version", "exceptions"],
+  "additionalProperties": false
+}
