@@ -1,6 +1,7 @@
-﻿# Gate CI on new exposed endpoints
+﻿# Gate CI with verified Express evidence
 
-Configure CI to fail when pull requests introduce unauthenticated endpoints.
+For supported Express JavaScript, use the parser-backed evidence scan and a
+versioned evidence policy. This gates only reported Verified capabilities.
 
 ## 1. GitHub Actions
 
@@ -17,7 +18,7 @@ jobs:
       - name: Install Endpoint & Auth Mapper
         run: pip install ./endpoint-auth-mapper
       - name: Run Scan
-        run: authmap --project . --fail-on EXPOSED --min-confidence high --strict-coverage
+        run: authmap --project . --evidence-scan express --evidence-policy evidence-policy.json
 ```
 
 ## 2. GitLab CI
@@ -30,12 +31,15 @@ authmap:
   image: python:3.12
   script:
     - pip install ./endpoint-auth-mapper
-    - authmap --project . --fail-on EXPOSED --min-confidence high --strict-coverage
+    - authmap --project . --evidence-scan express --evidence-policy evidence-policy.json
 ```
 
-## Flags Details
+## Legacy Compatibility Gate
 
-- `--fail-on EXPOSED`: Fails pipeline (exit code 1) if any EXPOSED endpoints exist.
-- `--min-confidence high`: Skips low or medium confidence detections to reduce false positives in CI blocks.
-- `--strict-coverage`: Fails pipeline (exit code 2) if eligible source is
-  unsupported, skipped by a safety/read guard, or fails analysis.
+`--fail-on EXPOSED` is retained for backwards compatibility over unverified
+legacy regex states. It is useful as an inventory heuristic, but it does not
+prove endpoints authenticated or provide Verified framework assurance. No
+Verified evidence gate is currently available for other bundled legacy packs.
+
+See [Evidence policy](../reference/evidence-policy.md) for policy fields and the
+[legacy capability inventory](../reference/legacy-capabilities.md) for limits.

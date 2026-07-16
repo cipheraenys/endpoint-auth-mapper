@@ -1,0 +1,6 @@
+[workspace]
+members = ["service"]
+resolver = "2"
+
+[workspace.dependencies]
+http = { package = "tower-http", version = "0.6" }

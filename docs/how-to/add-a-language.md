@@ -4,6 +4,9 @@ Endpoint & Auth Mapper uses JSON rule packs for candidate discovery and auth-sig
 recognition. A custom pack can add syntax inventory without engine changes, but
 does not become verified framework protection support.
 
+Review the [legacy capability inventory](../reference/legacy-capabilities.md)
+before describing support or using legacy findings as assurance.
+
 ## 1. Define rule pack
 
 Create `src/authmapper/rulepacks/<language>.json`.

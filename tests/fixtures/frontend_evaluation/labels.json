@@ -1,0 +1,155 @@
+{
+  "schema_version": 1,
+  "javascript": {
+    "projects": [
+      {
+        "name": "esm-cjs-provenance",
+        "files": ["package.json", "src/app.js", "src/local.js", "src/feature.js"],
+        "labels": {
+          "imports": [
+            ["src/app.js", "defaultThing", "example-lib", "default", "esm_default", null],
+            ["src/app.js", "feature", "./feature.js", "default", "esm_default", "src/feature.js"],
+            ["src/app.js", "localAlias", "./local.js", "localValue", "esm_named", "src/local.js"],
+            ["src/app.js", "remoteAlias", "example-lib", "remote", "esm_named", null],
+            ["src/app.js", "tools", "example-lib", "*", "esm_namespace", null],
+            ["src/feature.js", "helper", "utility-lib", "helper", "cjs_named", null]
+          ],
+          "exports": [
+            ["src/app.js", "handler", "handler", null, "named", null],
+            ["src/app.js", "localValue", "localValue", "./local.js", "reexport", "src/local.js"],
+            ["src/app.js", "publicFeature", "default", "./feature.js", "reexport", "src/feature.js"],
+            ["src/feature.js", "default", "helper", null, "cjs", null],
+            ["src/local.js", "default", "localValue", null, "default", null]
+          ],
+          "syntax": [
+            ["src/app.js", "call", 5, 1],
+            ["src/app.js", "call", 6, 37],
+            ["src/app.js", "handler", 6, 24],
+            ["src/app.js", "parameter", 6, 25],
+            ["src/app.js", "parameters", 6, 24],
+            ["src/app.js", "property", 5, 1],
+            ["src/app.js", "property", 6, 37],
+            ["src/feature.js", "call", 1, 20],
+            ["src/feature.js", "property", 2, 1],
+            ["src/local.js", "handler", 1, 16],
+            ["src/local.js", "parameters", 1, 35]
+          ]
+        }
+      },
+      {
+        "name": "package-isolation",
+        "files": ["package.json", "src/app.js", "packages/api/package.json", "packages/api/src/index.js"],
+        "labels": {
+          "imports": [
+            ["src/app.js", "api", "../packages/api/src/index.js", "default", "esm_default", "packages/api/src/index.js"]
+          ],
+          "diagnostics": [
+            ["src/app.js", "frontend.javascript.package_boundary_ambiguity", 1]
+          ],
+          "exports": [
+            ["packages/api/src/index.js", "default", "api", null, "default", null]
+          ],
+          "syntax": [
+            ["packages/api/src/index.js", "handler", 1, 16],
+            ["packages/api/src/index.js", "parameters", 1, 28],
+            ["src/app.js", "call", 2, 1],
+            ["src/app.js", "property", 2, 1]
+          ]
+        }
+      },
+      {
+        "name": "typescript-unsupported",
+        "files": ["package.json", "src/controller.ts"],
+        "labels": {
+          "diagnostics": [
+            ["src/controller.ts", "frontend.javascript.unsupported_source", 1]
+          ]
+        }
+      },
+      {
+        "name": "binding-collision",
+        "files": ["package.json", "src/app.js"],
+        "labels": {
+          "imports": [
+            ["src/app.js", "service", "one-lib", "default", "esm_default", null],
+            ["src/app.js", "service", "two-lib", "handler", "esm_named", null]
+          ],
+          "syntax": [
+            ["src/app.js", "call", 3, 1]
+          ],
+          "diagnostics": [
+            ["src/app.js", "frontend.javascript.ambiguous_binding", 1]
+          ]
+        }
+      }
+    ]
+  },
+  "rust": {
+    "projects": [
+      {
+        "name": "cargo-provenance",
+        "files": ["Cargo.toml", "src/lib.rs", "src/api.rs"],
+        "labels": {
+          "dependencies": [
+            ["Cargo.toml", "web", "axum", "dependencies", false]
+          ],
+          "uses": [
+            ["src/lib.rs", "Router", "Router", "web::Router", "axum", false, false],
+            ["src/lib.rs", "get", "get", "web::routing::get", "axum", false, false],
+            ["src/lib.rs", "api", "api", "crate::api", "local", false, false]
+          ],
+          "modules": [
+            ["src/lib.rs", "api", false, "src/api.rs"]
+          ],
+          "syntax": [
+            ["src/api.rs", "function", 1, 1],
+            ["src/api.rs", "parameters", 1, 15],
+            ["src/lib.rs", "attribute", 5, 1],
+            ["src/lib.rs", "call", 7, 5],
+            ["src/lib.rs", "call", 7, 30],
+            ["src/lib.rs", "function", 6, 1],
+            ["src/lib.rs", "method_call", 7, 5],
+            ["src/lib.rs", "parameter", 6, 20],
+            ["src/lib.rs", "parameters", 6, 19],
+            ["src/lib.rs", "type", 6, 27],
+            ["src/lib.rs", "type", 6, 37]
+          ]
+        }
+      },
+      {
+        "name": "workspace-alias",
+        "files": ["Cargo.toml", "service/Cargo.toml", "service/src/lib.rs"],
+        "labels": {
+          "dependencies": [
+            ["service/Cargo.toml", "http", "tower-http", "dependencies", true]
+          ],
+          "uses": [
+            ["service/src/lib.rs", "TraceLayer", "TraceLayer", "http::trace::TraceLayer", "tower-http", false, false]
+          ],
+          "syntax": [
+            ["service/src/lib.rs", "function", 3, 1],
+            ["service/src/lib.rs", "parameters", 3, 13],
+            ["service/src/lib.rs", "type", 3, 19],
+            ["service/src/lib.rs", "type", 3, 26]
+          ]
+        }
+      },
+      {
+        "name": "macro-limitation",
+        "files": ["Cargo.toml", "src/lib.rs"],
+        "labels": {
+          "syntax": [
+            ["src/lib.rs", "attribute", 1, 1],
+            ["src/lib.rs", "function", 2, 1],
+            ["src/lib.rs", "macro", 3, 5],
+            ["src/lib.rs", "parameters", 2, 13]
+          ],
+          "diagnostics": [
+            ["src/lib.rs", "frontend.rust.unsupported_cfg", 1],
+            ["src/lib.rs", "frontend.rust.unsupported_macro", 3]
+          ]
+        }
+      }
+    ]
+  }
+}

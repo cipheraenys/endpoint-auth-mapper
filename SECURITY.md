@@ -1,8 +1,8 @@
 # Security & Dual-Use Statement
 
-Endpoint & Auth Mapper is a **defensive** application-security tool. It helps
-developers find unauthenticated HTTP endpoints in code they own so they can add
-proper authentication before deployment.
+Endpoint & Auth Mapper is a **defensive** application-security tool. It inventories
+route-shaped candidates and, for supported Express evidence capabilities, maps
+auth evidence in code the operator owns.
 
 Like most security tooling, it is **dual-use**: a map of unauthenticated
 endpoints aids a defender fixing them and, in principle, an attacker seeking
@@ -28,14 +28,14 @@ running system. It has no capability to do so by design.
 |---|---|---|
 | **No network egress** | No sockets, no HTTP client, no URL input anywhere in the codebase. | whole project |
 | **No live-target mode** | The only input is a local `--project` path. There is no host/URL argument. | `cli.py` |
-| **Read-only on target** | Target files are read as text and matched with regex. Never imported, `eval`'d, or executed. | `core/engine.py`, `core/safety.py` |
+| **Read-only on target** | Target files are read as bytes/text and parsed statically. Never imported, `eval`'d, built, or executed. | `core/engine.py`, `frontends/`, `core/safety.py` |
 | **Fail-safe classification** | Ambiguity → `UNKNOWN`; `EXPOSED` requires HIGH discovery confidence. | `core/classifier.py` |
 | **Confidential output** | Reports default to a gitignored dir; write paths are confined (no traversal). | `.gitignore`, `core/safety.ensure_within` |
 | **Secret redaction** | Snippets mask passwords, tokens, and long high-entropy strings. | `core/safety.redact` |
 | **ReDoS resistance** | Every regex runs under a wall-clock budget; overruns are isolated per file. | `core/safety.SafeMatcher` |
 | **Bounded reads** | Oversized and binary files are skipped, not parsed. | `core/safety.read_text_safely` |
 | **Resilience** | A failure on one file becomes a recorded warning, never a crash. | `core/engine.Engine.scan` |
-| **Zero dependencies** | Standard library only at runtime; nothing to supply-chain compromise. | `pyproject.toml` |
+| **Pinned dependencies** | Schema, TOML, Tree-sitter runtime, and JS/Rust grammars are exact pins; target package managers never run. | `pyproject.toml`, `frontends/` |
 
 ## Why the output is confidential
 
@@ -73,6 +73,11 @@ opening a public issue.
 
 ## Runtime dependencies
 
+Runtime dependencies are exact pins in `pyproject.toml`. Analysis does not
+install dependencies, invoke package managers, execute lifecycle hooks, or
+access the network. Tree-sitter frontends parse user source without running
+Node, Cargo, build scripts, macros, crates, or target code.
+
 `jsonschema==4.26.0` is the maintained MIT-licensed validator used for public
 JSON Schema 2020-12 contracts, including `$ref` and
 `unevaluatedProperties`. It validates inert manifest data only; it does not
@@ -83,3 +88,8 @@ require schema conformance, full regression, license, and vulnerability review.
 
 `types-jsonschema==4.26.0.20260518` is a development-only Apache-2.0 typeshed
 stub package and is not installed at runtime.
+
+`tomli==2.4.1`, `tree-sitter==0.25.2`,
+`tree-sitter-javascript==0.23.1`, and `tree-sitter-rust==0.24.2` are the
+MIT-licensed TOML/parser dependencies. The legacy `--experimental-ast` path
+accepts custom rulepack queries; no bundled pack currently defines AST queries.

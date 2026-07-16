@@ -2,6 +2,11 @@
 
 Endpoint & Auth Mapper is a **modular monolith**: a single installable unit with strictly separated internal layers. Each layer depends only on the ones beneath it, ensuring responsibilities never blur and every piece is independently testable.
 
+The default legacy pipeline is retained for compatibility and emits unverified
+regex states. The parser-backed v2 pipeline uses adapters, shared frontends,
+evidence graphs, and capability-level governance; currently only the documented
+Express envelope is Verified.
+
 ## Layered overview
 
 ```text

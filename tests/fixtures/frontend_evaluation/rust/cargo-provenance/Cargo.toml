@@ -1,0 +1,6 @@
+[package]
+name = "cargo-provenance"
+version = "0.1.0"
+
+[dependencies]
+web = { package = "axum", version = "0.8" }

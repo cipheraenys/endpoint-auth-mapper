@@ -20,7 +20,7 @@
     {
       "id": "authentication-principal",
       "regex": "@AuthenticationPrincipal\\b",
-      "scope": "same_line"
+      "scope": "file"
     },
     {
       "id": "security-context",

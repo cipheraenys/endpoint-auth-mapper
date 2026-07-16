@@ -14,11 +14,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   fingerprints, SARIF mapping, and labeled legacy compatibility artifact.
 - Internal adapter explanation view and generic cross-framework contract
   challenge fixtures; no production framework capability promotion.
+- Shared JavaScript and Rust parser frontends plus applicability/collision
+  conformance primitives; no new framework adapter promotion.
+- Evidence-backed legacy capability inventory covering all bundled packs and the
+  experimental AST path.
 
 ### Changed
 - File-wide auth signals no longer prove any bundled endpoint protected.
 - Experimental AST findings are advisory and cannot block CI.
 - JSON output schema is `1.1` with coverage fields.
+- Public documentation now labels bundled regex packs and `--fail-on` as legacy
+  compatibility heuristics rather than Verified framework assurance.
+- Spring `@AuthenticationPrincipal` remains a visible file-wide indicator but
+  no longer proves legacy `PROTECTED`.
 
 ### Fixed
 - Project config and baseline artifacts can be committed intentionally.

@@ -1,8 +1,8 @@
 # Endpoint & Auth Mapper — GitHub Actions workflow
 #
 # Placement of the "service": an on-demand CI gate, not a running daemon. The
-# analyzer runs on pull requests, uploads SARIF to the Security tab, and fails
-# the build when new EXPOSED endpoints are introduced.
+# legacy analyzer runs on pull requests, uploads advisory SARIF, and applies the
+# backwards-compatible unverified regex gate below.
 #
 # Copy to: .github/workflows/auth-audit.yml
 name: auth-audit
@@ -42,8 +42,8 @@ jobs:
         with:
           sarif_file: .security-reports/authmap.sarif
 
-      # Gate the build: fail only on NEW exposed endpoints (baseline-aware).
-      - name: Enforce auth gate
+      # Compatibility gate over unverified legacy regex states.
+      - name: Enforce legacy inventory gate
         run: |
           authmap --project . --fail-on EXPOSED --min-confidence high \
                   --strict-coverage --baseline .authmap-baseline.json --quiet

@@ -1,0 +1,7 @@
+{
+  "name": "esm-cjs-provenance",
+  "dependencies": {
+    "example-lib": "1.0.0",
+    "utility-lib": "1.0.0"
+  }
+}
