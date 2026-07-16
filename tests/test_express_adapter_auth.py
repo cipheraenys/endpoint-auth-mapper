@@ -143,6 +143,34 @@ def test_auth_semantics_inside_handler_remain_unresolved(tmp_path: Path):
     assert [item.verdict for item in resolutions] == [EndpointVerdict.UNRESOLVED]
 
 
+def test_handler_auth_lifecycle_members_are_unresolved(tmp_path: Path):
+    _, resolutions = _resolve(
+        tmp_path,
+        'const express = require("express");\nconst app = express();\n'
+        'app.post("/logout", validate, authController.logout);\n'
+        'app.post("/refresh", validate, authController.refreshTokens);\n'
+        'app.post("/reset", validate, authController.resetPassword);\n'
+        'app.post("/verify", validate, authController.verifyEmail);\n',
+    )
+
+    assert [item.verdict for item in resolutions] == [EndpointVerdict.UNRESOLVED] * 4
+
+
+def test_non_enforcement_handler_members_remain_unguarded(tmp_path: Path):
+    _, resolutions = _resolve(
+        tmp_path,
+        'const express = require("express");\nconst app = express();\n'
+        'app.post("/register", validate, authController.register);\n'
+        'app.post("/login", validate, authController.login);\n'
+        'app.post("/forgot", validate, authController.forgotPassword);\n'
+        'app.get("/profile", handlerController.getProfile);\n'
+        'app.post("/ordinary", validate, handler);\n'
+        'app.post("/inline", validate, (req, res) => res.send("ok"));\n',
+    )
+
+    assert [item.verdict for item in resolutions] == [EndpointVerdict.UNGUARDED] * 6
+
+
 def test_versioned_public_declaration_requires_policy_owner_reason(tmp_path: Path):
     _, resolutions = _resolve(
         tmp_path,

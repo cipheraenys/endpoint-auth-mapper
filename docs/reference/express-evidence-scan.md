@@ -25,6 +25,9 @@ authmap --project . --evidence-scan express --format json --explain-adapter
 - Exact local custom auth imports declared in source with
   `// authmap-auth-v1 module=./auth.js symbol=requireAuth rule=ID`. The symbol
   must resolve to that package-local module.
+- Auth-lifecycle handler members such as logout, token refresh, password reset,
+  and email verification remain `UNRESOLVED` when no route enforcement proof is
+  available. Handler names can preserve ambiguity but never prove protection.
 - V2 JSON/SARIF source spans, derivations, associations, proofs, capability
   provenance, coverage, and deterministic fingerprints.
 

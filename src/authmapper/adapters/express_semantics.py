@@ -181,7 +181,15 @@ def _auth_looking(name: str | None) -> bool:
         return False
     lowered = name.lower()
     if lowered.startswith("custom-member:"):
-        return lowered.endswith((".isauthenticated", ".isauthorized"))
+        member = lowered.rsplit(".", 1)[-1].replace("_", "").replace("-", "")
+        return member in {
+            "isauthenticated",
+            "isauthorized",
+            "logout",
+            "refreshtokens",
+            "resetpassword",
+            "verifyemail",
+        }
     if lowered == "passport.authenticate:local":
         return False
     if lowered.startswith("custom-auth:"):
