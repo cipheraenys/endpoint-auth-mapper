@@ -63,6 +63,16 @@ def test_passport_lookalike_import_never_proves_enforcement(tmp_path: Path):
     assert [item.verdict for item in resolutions] == [EndpointVerdict.UNGUARDED]
 
 
+def test_named_passport_export_alias_never_proves_enforcement(tmp_path: Path):
+    _, resolutions = _resolve(
+        tmp_path,
+        'import express from "express";\nimport { Strategy as passport } from "passport";\n'
+        'const app = express();\napp.get("/admin", passport.authenticate("jwt"), handler);\n',
+    )
+
+    assert [item.verdict for item in resolutions] == [EndpointVerdict.UNGUARDED]
+
+
 def test_passport_oauth_flow_is_not_treated_as_resource_enforcement(tmp_path: Path):
     _, resolutions = _resolve(
         tmp_path,

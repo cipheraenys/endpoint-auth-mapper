@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
-import tree_sitter_javascript
-from tree_sitter import Language, Node, Parser
+from tree_sitter import Node
 
 from authmapper.core.v2 import (
     ActivationEvidence,
@@ -29,24 +27,20 @@ from authmapper.core.v2 import (
     SubjectKind,
     UnresolvedRecord,
 )
+from authmapper.frontends.javascript import (
+    MAX_SOURCE_BYTES,
+    JavaScriptFrontend,
+    JavaScriptSource,
+    default_export,
+    module_bindings,
+    resolve_local_module,
+)
 
-_SUPPORTED_SUFFIXES = frozenset({".js", ".mjs", ".cjs"})
+__all__ = ["ExpressAdapter", "MAX_SOURCE_BYTES"]
+
 _DEPENDENCY_FIELDS = ("dependencies", "devDependencies", "peerDependencies", "optionalDependencies")
 _ROUTE_METHODS = frozenset({"all", "delete", "get", "head", "options", "patch", "post", "put", "use"})
-MAX_SOURCE_FILES = 10_000
-MAX_SOURCE_BYTES = 2 * 1024 * 1024
-MAX_TOTAL_BYTES = 50 * 1024 * 1024
-
-
-@dataclass(frozen=True, slots=True)
-class _ParsedSource:
-    path: Path
-    relative_path: str
-    source: bytes
-    root: Node
-    package_path: Path | None
-    package_data: dict[str, Any] | None
-    package_error: str | None
+_ParsedSource = JavaScriptSource
 
 
 @dataclass(frozen=True, slots=True)
@@ -129,8 +123,9 @@ class ExpressAdapter:
 
     def analyze(self, input_data: AdapterInput) -> AdapterArtifact:
         """Extract supported route and local mount evidence."""
-        parsed, diagnostics = self._parse_inputs(input_data)
-        diagnostic_list = list(diagnostics)
+        frontend = JavaScriptFrontend().analyze(input_data)
+        parsed = frontend.sources
+        diagnostic_list = [_express_diagnostic(item) for item in frontend.diagnostics]
         for item in parsed:
             unresolved_route = _first_unowned_route_call(item)
             if unresolved_route is not None:
@@ -196,105 +191,19 @@ class ExpressAdapter:
         )
 
     def _parse_inputs(self, input_data: AdapterInput) -> tuple[tuple[_ParsedSource, ...], tuple[Diagnostic, ...]]:
-        parser = Parser(Language(tree_sitter_javascript.language()))
-        parsed: list[_ParsedSource] = []
-        diagnostics: list[Diagnostic] = []
-        root = input_data.project_root.resolve()
-        if len(input_data.source_paths) > MAX_SOURCE_FILES:
-            return (), (
-                Diagnostic(
-                    id="diagnostic:express:budget:file-count",
-                    level=DiagnosticLevel.ERROR,
-                    code="express.budget.file_count",
-                    message=f"source count exceeds limit of {MAX_SOURCE_FILES}",
-                ),
-            )
-        total_bytes = 0
-
-        for path in sorted(input_data.source_paths, key=lambda item: item.as_posix()):
-            resolved = path.resolve()
-            relative = _relative(resolved, root)
-            if resolved.suffix.lower() not in _SUPPORTED_SUFFIXES:
-                diagnostics.append(
-                    Diagnostic(
-                        id=f"diagnostic:express:unsupported:{relative}",
-                        level=DiagnosticLevel.WARNING,
-                        code="express.source.unsupported",
-                        message=f"unsupported Express source type: {relative}",
-                    )
-                )
-                continue
-            try:
-                source = resolved.read_bytes()
-            except OSError as exc:
-                diagnostics.append(
-                    Diagnostic(
-                        id=f"diagnostic:express:read:{relative}",
-                        level=DiagnosticLevel.ERROR,
-                        code="express.source.read_error",
-                        message=f"cannot read {relative}: {exc}",
-                    )
-                )
-                continue
-            total_bytes += len(source)
-            if len(source) > MAX_SOURCE_BYTES or total_bytes > MAX_TOTAL_BYTES:
-                diagnostics.append(
-                    Diagnostic(
-                        id=f"diagnostic:express:budget:{relative}",
-                        level=DiagnosticLevel.ERROR,
-                        code="express.budget.source_bytes",
-                        message=f"source budget exceeded while reading {relative}",
-                    )
-                )
-                continue
-
-            tree = parser.parse(source)
-            if tree.root_node.has_error:
-                diagnostics.append(
-                    Diagnostic(
-                        id=f"diagnostic:express:parse:{relative}",
-                        level=DiagnosticLevel.ERROR,
-                        code="express.source.parse_error",
-                        message=f"JavaScript parse failed: {relative}",
-                        span=_span(relative, tree.root_node),
-                    )
-                )
-                continue
-            package_path = _nearest_package(resolved.parent, root)
-            package_data: dict[str, Any] | None = None
-            package_error: str | None = None
-            if package_path is not None:
-                try:
-                    value = json.loads(package_path.read_text(encoding="utf-8"))
-                    if not isinstance(value, dict):
-                        raise ValueError("package root must be an object")
-                    package_data = value
-                except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as exc:
-                    package_error = f"invalid owning package {package_path.name}: {exc}"
-                    diagnostics.append(
-                        Diagnostic(
-                            id=f"diagnostic:express:package:{relative}",
-                            level=DiagnosticLevel.ERROR,
-                            code="express.package.invalid",
-                            message=f"{relative}: {package_error}",
-                        )
-                    )
-            parsed.append(
-                _ParsedSource(resolved, relative, source, tree.root_node, package_path, package_data, package_error)
-            )
-        return tuple(parsed), tuple(sorted(diagnostics, key=lambda item: item.id))
+        result = JavaScriptFrontend().parse(input_data)
+        return result.sources, tuple(_express_diagnostic(item) for item in result.diagnostics)
 
 
-def _nearest_package(start: Path, project_root: Path) -> Path | None:
-    current = start
-    while current == project_root or project_root in current.parents:
-        candidate = current / "package.json"
-        if candidate.is_file():
-            return candidate
-        if current == project_root:
-            break
-        current = current.parent
-    return None
+def _express_diagnostic(diagnostic: Diagnostic) -> Diagnostic:
+    """Keep frozen Express diagnostic codes while parsing moves to the frontend."""
+    code = {
+        "frontend.javascript.package_invalid": "express.package.invalid",
+        "frontend.javascript.parse_error": "express.source.parse_error",
+        "frontend.javascript.resource_limit": "express.budget.source_bytes",
+        "frontend.javascript.unsupported_source": "express.source.unsupported",
+    }.get(diagnostic.code, diagnostic.code)
+    return replace(diagnostic, id=diagnostic.id.replace(":frontend:javascript:", ":express:"), code=code)
 
 
 def _has_express_dependency(package: dict[str, Any]) -> bool:
@@ -501,7 +410,7 @@ def _append_external_mount_middleware(
     subjects: list[Subject],
     relations: list[Relation],
 ) -> None:
-    passport_names = _module_bindings(item.root, item.source, "passport")
+    passport_names = {name for name, _ in module_bindings(item.root, item.source, "passport")}
     custom_auth_names = _custom_auth_names(item)
     for index, middleware_node in enumerate(middleware_nodes):
         subject = Subject(
@@ -525,23 +434,7 @@ def _append_external_mount_middleware(
 
 
 def _exported_receiver(root: Node, source: bytes) -> str | None:
-    for node in _walk(root):
-        text = _text(node, source).strip()
-        if node.type == "export_statement" and text.startswith("export default "):
-            identifiers = [child for child in node.named_children if child.type == "identifier"]
-            if identifiers:
-                return _text(identifiers[-1], source)
-        if node.type == "assignment_expression":
-            left = node.child_by_field_name("left")
-            right = node.child_by_field_name("right")
-            if (
-                left is not None
-                and right is not None
-                and right.type == "identifier"
-                and _text(left, source) == "module.exports"
-            ):
-                return _text(right, source)
-    return None
+    return default_export(root, source)
 
 
 def _exported_callback(item: _ParsedSource) -> str | None:
@@ -639,65 +532,11 @@ def _array_mount_calls(item: _ParsedSource) -> tuple[tuple[str, str, str, Node],
 
 
 def _local_imports(item: _ParsedSource, project_root: Path) -> dict[str, Path]:
-    imports: dict[str, Path] = {}
-    for node in _walk(item.root):
-        if node.type == "import_statement":
-            module = node.child_by_field_name("source")
-            clause = next((child for child in node.named_children if child.type == "import_clause"), None)
-            identifier = (
-                next((child for child in clause.named_children if child.type == "identifier"), None)
-                if clause is not None
-                else None
-            )
-            if module is not None and identifier is not None:
-                target = _resolve_local_module(item.path, _text(module, item.source).strip("'\""), project_root)
-                if target is not None:
-                    imports[_text(identifier, item.source)] = target
-        elif node.type == "variable_declarator":
-            name = node.child_by_field_name("name")
-            value = node.child_by_field_name("value")
-            module_name = _required_module(value, item.source) if value is not None else None
-            if name is not None and name.type == "identifier" and module_name is not None:
-                target = _resolve_local_module(item.path, module_name, project_root)
-                if target is not None:
-                    imports[_text(name, item.source)] = target
-            elif name is not None and name.type == "object_pattern" and module_name is not None:
-                target = _resolve_local_module(item.path, module_name, project_root)
-                if target is not None:
-                    for child in name.named_children:
-                        if child.type == "shorthand_property_identifier_pattern":
-                            imports[_text(child, item.source)] = target
-    return imports
-
-
-def _required_module(node: Node, source: bytes) -> str | None:
-    if node.type != "call_expression":
-        return None
-    function = node.child_by_field_name("function")
-    arguments = node.child_by_field_name("arguments")
-    if function is None or arguments is None or _text(function, source) != "require":
-        return None
-    args = arguments.named_children
-    return _literal_string(args[0], source) if len(args) == 1 else None
-
-
-def _resolve_local_module(source_path: Path, module_name: str, project_root: Path) -> Path | None:
-    if not module_name.startswith("."):
-        return None
-    base = (source_path.parent / module_name).resolve()
-    candidates = (
-        base,
-        *(Path(f"{base}{suffix}") for suffix in _SUPPORTED_SUFFIXES),
-        *(base / f"index{suffix}" for suffix in _SUPPORTED_SUFFIXES),
-    )
-    return next(
-        (
-            path
-            for path in candidates
-            if path.is_file() and (path == project_root or project_root in path.parents)
-        ),
-        None,
-    )
+    return {
+        binding.local_name: binding.target
+        for binding in JavaScriptFrontend().local_modules(item, project_root)
+        if binding.target is not None
+    }
 
 
 def _external_mount_path(
@@ -716,7 +555,7 @@ def _external_mount_path(
 
 def _extract_file(item: _ParsedSource) -> _FileEvidence:
     express_names = {name for name, _ in _express_bindings(item.root, item.source)}
-    passport_names = _module_bindings(item.root, item.source, "passport")
+    passport_names = {name for name, _ in module_bindings(item.root, item.source, "passport")}
     custom_auth_names = _custom_auth_names(item)
     receivers: dict[str, tuple[str, Subject, Scope]] = {}
     subjects: list[Subject] = []
@@ -1150,45 +989,6 @@ def _literal_string(node: Node | None, source: bytes) -> str | None:
     return text[1:-1]
 
 
-def _module_bindings(root: Node, source: bytes, module_name: str) -> set[str]:
-    bindings: set[str] = set()
-    for node in _walk(root):
-        if node.type == "import_statement":
-            module = node.child_by_field_name("source")
-            if module is None or _text(module, source).strip("'\"") != module_name:
-                continue
-            clause = next((child for child in node.named_children if child.type == "import_clause"), None)
-            identifier = (
-                next((child for child in clause.named_children if child.type == "identifier"), None)
-                if clause is not None
-                else None
-            )
-            if identifier is not None:
-                bindings.add(_text(identifier, source))
-        elif node.type == "variable_declarator":
-            name = node.child_by_field_name("name")
-            value = node.child_by_field_name("value")
-            if (
-                name is not None
-                and name.type == "identifier"
-                and value is not None
-                and _is_module_require(value, source, module_name)
-            ):
-                bindings.add(_text(name, source))
-    return bindings
-
-
-def _is_module_require(node: Node, source: bytes, module_name: str) -> bool:
-    if node.type != "call_expression":
-        return False
-    function = node.child_by_field_name("function")
-    arguments = node.child_by_field_name("arguments")
-    if function is None or arguments is None or _text(function, source) != "require":
-        return False
-    args = arguments.named_children
-    return len(args) == 1 and args[0].type == "string" and _text(args[0], source).strip("'\"") == module_name
-
-
 def _middleware_name(
     node: Node,
     source: bytes,
@@ -1257,7 +1057,7 @@ def _custom_auth_names(item: _ParsedSource) -> dict[str, str]:
         if not symbol or not module or not rule or symbol.split(".", 1)[0] not in imports:
             continue
         package_root = item.package_path.parent if item.package_path else item.path.parent
-        resolved = _resolve_local_module(item.path, module, package_root)
+        resolved = resolve_local_module(item.path, module, package_root)
         if resolved is not None and imports[symbol.split(".", 1)[0]] == resolved:
             declarations[symbol] = rule
     for symbol, target in imports.items():
