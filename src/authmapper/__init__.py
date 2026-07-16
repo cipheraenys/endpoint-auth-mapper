@@ -1,12 +1,13 @@
 """Endpoint & Auth Mapper.
 
-A local, offline static analyzer that maps candidate HTTP endpoints
-across languages and classifies their authentication posture as one of:
-PROTECTED, EXPOSED, UNKNOWN, or PUBLIC.
+The default scanner inventories route-shaped candidates with legacy regex
+heuristics and emits unverified compatibility states. The opt-in Express
+evidence scan provides parser-backed v2 evidence within its documented support
+envelope.
 
 Design guarantees (see SECURITY.md):
     * Source-gated  — analyzes source you already possess; no network egress.
-    * Fail-safe     — ambiguity is reported as UNKNOWN, never PROTECTED.
+    * Fail-safe     — unassociated evidence remains UNKNOWN or UNRESOLVED.
     * Read-only     — target code is parsed as text, never imported or executed.
     * Audited deps  — explicit dependencies validate inert public contracts.
     * Deterministic — stable, sorted output suitable for CI diffing.

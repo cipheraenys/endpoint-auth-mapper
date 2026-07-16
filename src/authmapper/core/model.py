@@ -16,7 +16,7 @@ from typing import Any
 
 
 class AuthState(enum.Enum):
-    """Authentication posture of an endpoint.
+    """Unverified compatibility state of a legacy endpoint candidate.
 
     The three-state (plus PUBLIC) model is the heart of the fail-safe design:
     when the engine cannot *confidently* prove an endpoint is guarded, it must
@@ -24,7 +24,7 @@ class AuthState(enum.Enum):
     as safety.
     """
 
-    PROTECTED = "PROTECTED"  # An auth guard was positively identified.
+    PROTECTED = "PROTECTED"  # A high-confidence legacy auth pattern matched.
     EXPOSED = "EXPOSED"      # Confidently an endpoint, and no guard was found.
     UNKNOWN = "UNKNOWN"      # Could not resolve routing/guards with confidence.
     PUBLIC = "PUBLIC"        # Intentionally public (exempt path / annotation).
@@ -138,7 +138,7 @@ class Endpoint:
 
 @dataclass(frozen=True)
 class Finding:
-    """The unit of analyzer output: an endpoint plus its classified posture."""
+    """Legacy scanner output: a candidate plus its compatibility state."""
 
     endpoint: Endpoint
     auth_state: AuthState

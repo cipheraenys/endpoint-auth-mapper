@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "endpoint-auth-mapper"
 version = "0.1.2"
-description = "Offline static analyzer mapping candidate HTTP endpoints and authentication posture."
+description = "Offline static analyzer for legacy endpoint inventory and parser-backed Express auth evidence."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
@@ -44,7 +44,6 @@ Homepage = "https://github.com/cipheraenys/endpoint-auth-mapper"
 authmap = "authmapper.cli:main"
 
 [project.optional-dependencies]
-ast = []
 dev = [
     "pytest>=7",
     "ruff>=0.5",

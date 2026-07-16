@@ -1,8 +1,11 @@
 # Security and Dual-Use
 
-Endpoint & Auth Mapper is a defensive application-security tool. Its primary goal is to help developers find unauthenticated HTTP endpoints in their code so they can add proper authentication before deployment.
+Endpoint & Auth Mapper is a defensive application-security tool. It inventories
+route-shaped candidates and, for supported Express capabilities, maps static
+auth evidence for developer review.
 
-However, like most security tooling, it is **dual-use**. A map of unauthenticated endpoints aids a defender in fixing them, but in principle, it could also aid an attacker seeking vulnerabilities.
+However, like most security tooling, it is **dual-use**. Candidate and evidence
+maps aid defenders but could also aid an attacker seeking review targets.
 
 We deliberately constrain the tool to the defensive side of that line.
 

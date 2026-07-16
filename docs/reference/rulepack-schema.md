@@ -1,6 +1,8 @@
 # Rule Pack Schema
 
-A rule pack teaches the analyzer about a specific language or framework using pure JSON data.
+A legacy rule pack teaches the regex scanner candidate and signal syntax using
+pure JSON data. It does not prove framework applicability, ownership,
+enforcement, or Verified v2 capability maturity.
 
 Valid packs must adhere to the schema below. Invalid packs raise a `RulePackError` on load.
 
@@ -20,6 +22,9 @@ Valid packs must adhere to the schema below. Invalid packs raise a `RulePackErro
 | `ast_language` | no | string | Tree-sitter language name for experimental AST analysis. |
 | `ast_endpoints` | no | array of objects | AST-based endpoint discovery queries. |
 | `ast_auth_signals` | no | array of objects | AST-based auth signal queries. |
+
+No bundled pack currently declares AST queries. Custom AST output is opt-in and
+advisory; it never participates in `--fail-on`.
 
 ## Endpoint pattern objects
 

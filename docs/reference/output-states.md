@@ -1,19 +1,21 @@
 # Output States
 
-Endpoint & Auth Mapper classifies every detected endpoint into one of four states based on the presence of authentication guards.
+The default legacy scanner assigns every detected candidate one of four
+compatibility states. These states summarize regex evidence; they are not v2
+verdicts or Verified framework assurance.
 
 | State | Severity mapping | Description |
 |---|---|---|
-| `EXPOSED` | `CRITICAL` or `HIGH` | Confidently an endpoint, and no auth guard was found. |
+| `EXPOSED` | `CRITICAL` or `HIGH` | A high-confidence candidate matched without an associated legacy auth pattern. |
 | `UNKNOWN` | `MEDIUM` | Structure or guard could not be confidently resolved — review required. |
-| `PROTECTED` | `INFO` | An auth guard was confidently associated with this endpoint. |
+| `PROTECTED` | `INFO` | A high-confidence same-line legacy auth pattern was associated; not enforcement proof. |
 | `PUBLIC` | `INFO` | Intentionally public through committed `public_paths` policy or an explicit custom rule-pack exemption. |
 
 ## State resolution
 
-The tool resolves states using a fail-safe approach:
-- To classify an endpoint as `PROTECTED`, the engine must match both the endpoint structure and an authentication guard associated with that endpoint.
-- To classify an endpoint as `EXPOSED`, the engine must match the endpoint structure with high confidence, but find no authentication guard.
+The legacy scanner resolves states using a fail-safe compatibility approach:
+- To classify a candidate as `PROTECTED`, the engine must match both endpoint syntax and a same-line legacy auth pattern.
+- To classify a candidate as `EXPOSED`, the engine must match endpoint syntax with high confidence but find no associated legacy auth pattern.
 - If the endpoint structure is ambiguous, or if an auth guard uses a pattern the tool does not confidently recognize, the state resolves to `UNKNOWN`.
 
 A file-wide auth-looking token is unassociated evidence for route-model packs;

@@ -6,7 +6,7 @@ reachable programmatically and from the TUI.
 
 Exit codes (CI contract):
     0  no gating findings
-    1  gating findings present (>= --fail-on)
+    1  legacy compatibility gate or evidence-policy violation
     2  tool/setup error
 """
 
@@ -55,8 +55,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="authmap",
         description=(
-            "Offline static analyzer that maps candidate HTTP endpoints and "
-            "classifies their authentication posture (PROTECTED/EXPOSED/UNKNOWN/PUBLIC). "
+            "Offline static analyzer with a legacy regex candidate inventory and "
+            "an opt-in parser-backed Express evidence scan. "
             "Run only on code you own or are authorized to audit."
         ),
         epilog="This tool performs no network activity and never executes target code.",
@@ -139,7 +139,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--experimental-ast",
         action="store_true",
         default=None,
-        help="Enable experimental AST-based analysis (requires tree-sitter).",
+        help=(
+            "Enable advisory AST queries from custom legacy rulepacks; bundled "
+            "packs define none and AST findings never participate in --fail-on."
+        ),
     )
     parser.add_argument(
         "--strict-coverage",
