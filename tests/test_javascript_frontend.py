@@ -260,6 +260,53 @@ def test_reexports_preserve_alias_and_module_provenance(tmp_path: Path):
     assert exports[0].target == (tmp_path / "router.js").resolve()
 
 
+def test_named_export_declarations_are_not_reported_as_default(tmp_path: Path):
+    (tmp_path / "package.json").write_text("{}", encoding="utf-8")
+    src = tmp_path / "index.js"
+    src.write_text(
+        "export const handler = () => {};\n"
+        "export function outer() { function nested() {} }\n"
+        "export default 42;\n",
+        encoding="utf-8",
+    )
+
+    frontend = JavaScriptFrontend()
+    result = frontend.parse(_input(tmp_path, src))
+    exports = frontend.exports(result.sources[0], tmp_path)
+
+    assert [(item.exported_name, item.local_name, item.kind) for item in exports] == [
+        ("default", None, "default"),
+        ("handler", "handler", "named"),
+        ("outer", "outer", "named"),
+    ]
+
+
+def test_default_export_with_comments_preserves_identifier(tmp_path: Path):
+    (tmp_path / "package.json").write_text("{}", encoding="utf-8")
+    source = tmp_path / "app.js"
+    source.write_text("const app = {};\nexport /* comment */ default app;\n", encoding="utf-8")
+
+    frontend = JavaScriptFrontend()
+    parsed = frontend.parse(_input(tmp_path, source))
+    exports = frontend.exports(parsed.sources[0], tmp_path)
+
+    assert [(item.exported_name, item.local_name, item.kind) for item in exports] == [
+        ("default", "app", "default")
+    ]
+
+
+def test_destructured_export_does_not_fabricate_symbol_name(tmp_path: Path):
+    (tmp_path / "package.json").write_text("{}", encoding="utf-8")
+    source = tmp_path / "app.js"
+    source.write_text("export const {first, source: alias} = value;\n", encoding="utf-8")
+
+    frontend = JavaScriptFrontend()
+    parsed = frontend.parse(_input(tmp_path, source))
+    exports = frontend.exports(parsed.sources[0], tmp_path)
+
+    assert exports == ()
+
+
 def test_unresolved_reexport_emits_diagnostic_and_coverage(tmp_path: Path):
     (tmp_path / "package.json").write_text("{}", encoding="utf-8")
     src = tmp_path / "index.js"

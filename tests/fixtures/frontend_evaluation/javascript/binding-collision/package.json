@@ -1,0 +1,7 @@
+{
+  "name": "binding-collision",
+  "dependencies": {
+    "one-lib": "1.0.0",
+    "two-lib": "1.0.0"
+  }
+}

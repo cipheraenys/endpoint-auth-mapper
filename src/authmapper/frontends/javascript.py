@@ -372,12 +372,41 @@ class JavaScriptFrontend:
                 module_name = literal_string(module, item.source)
                 target = resolve_local_module(item.path, module_name, project_root) if module_name else None
                 declaration = node.child_by_field_name("declaration")
-                if declaration is not None:
-                    name = declaration.child_by_field_name("name")
-                    local_name = text(name, item.source) if name is not None else None
+                if declaration is None and _has_default_token(node):
+                    value = node.child_by_field_name("value")
+                    local_name = text(value, item.source) if value is not None and value.type == "identifier" else None
                     exports.append(
                         JavaScriptExport("default", local_name, None, None, span(item.relative_path, node), "default")
                     )
+                if declaration is not None:
+                    if _has_default_token(node):
+                        name = declaration.child_by_field_name("name")
+                        local_name = text(name, item.source) if name is not None else None
+                        exports.append(
+                            JavaScriptExport(
+                                "default", local_name, None, None, span(item.relative_path, node), "default"
+                            )
+                        )
+                    else:
+                        declarations = (
+                            declaration.named_children
+                            if declaration.type in {"lexical_declaration", "variable_declaration"}
+                            else (declaration,)
+                        )
+                        for child in declarations:
+                            name = child.child_by_field_name("name")
+                            if name is not None and name.type == "identifier":
+                                local_name = text(name, item.source)
+                                exports.append(
+                                    JavaScriptExport(
+                                        local_name,
+                                        local_name,
+                                        None,
+                                        None,
+                                        span(item.relative_path, child),
+                                        "named",
+                                    )
+                                )
                 export_clause = next((child for child in node.named_children if child.type == "export_clause"), None)
                 if export_clause is not None:
                     for specifier in export_clause.named_children:
@@ -566,6 +595,10 @@ def literal_string(node: Node | None, source: bytes) -> str | None:
     if node is None or node.type != "string":
         return None
     return text(node, source)[1:-1]
+
+
+def _has_default_token(node: Node) -> bool:
+    return any(child.type == "default" for child in node.children)
 
 
 def _package_boundary(start: Path, project_root: Path) -> PackageBoundary:
