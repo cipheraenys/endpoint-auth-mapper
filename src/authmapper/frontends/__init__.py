@@ -1,5 +1,6 @@
 """Shared parser frontends for framework adapters."""
 
+from .conformance import ClaimRole, OwnershipClaim, resolve_ownership
 from .javascript import (
     JavaScriptAnalysis,
     JavaScriptExport,
@@ -26,6 +27,9 @@ from .rust import (
 )
 
 __all__ = [
+    "ClaimRole",
+    "OwnershipClaim",
+    "resolve_ownership",
     "JavaScriptAnalysis",
     "JavaScriptExport",
     "JavaScriptFailureCoverage",
