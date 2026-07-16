@@ -12,6 +12,18 @@ from .javascript import (
     JavaScriptSyntax,
     PackageBoundary,
 )
+from .rust import (
+    CargoDependency,
+    CargoPackage,
+    RustAnalysis,
+    RustFailureCoverage,
+    RustFrontend,
+    RustModule,
+    RustModuleSummary,
+    RustSource,
+    RustSyntax,
+    RustUse,
+)
 
 __all__ = [
     "JavaScriptAnalysis",
@@ -24,4 +36,14 @@ __all__ = [
     "JavaScriptSource",
     "JavaScriptSyntax",
     "PackageBoundary",
+    "CargoDependency",
+    "CargoPackage",
+    "RustAnalysis",
+    "RustFailureCoverage",
+    "RustFrontend",
+    "RustModule",
+    "RustModuleSummary",
+    "RustSource",
+    "RustSyntax",
+    "RustUse",
 ]
