@@ -905,11 +905,11 @@ def _route_call(function: Node, source: bytes) -> _RouteCall | None:
         if method == "use":
             handler_types = {"arrow_function", "function_expression"}
             if len(args) == 1 and args[0].type in handler_types:
-                if _continuation_middleware(args[0]):
+                if _continuation_middleware(args[0], source):
                     return None
                 return _RouteCall(_text(obj, source), ((method, arguments),), None)
             if len(args) >= 2 and args[-1].type in handler_types:
-                if _continuation_middleware(args[-1]):
+                if _continuation_middleware(args[-1], source):
                     return None
                 return _RouteCall(_text(obj, source), ((method, arguments),), args[0])
             return None
@@ -942,11 +942,27 @@ def _route_call(function: Node, source: bytes) -> _RouteCall | None:
     return None
 
 
-def _continuation_middleware(node: Node) -> bool:
+def _continuation_middleware(node: Node, source: bytes) -> bool:
     parameters = node.child_by_field_name("parameters")
-    if parameters is None:
+    body = node.child_by_field_name("body")
+    if parameters is None or body is None:
         return False
-    return len(parameters.named_children) >= 3
+    parameter_count = len(parameters.named_children)
+    if parameter_count < 3:
+        return False
+    if parameter_count >= 4:
+        return True
+    return _calls_continuation(body, source)
+
+
+def _calls_continuation(node: Node, source: bytes) -> bool:
+    for child in _walk(node):
+        if child.type != "call_expression":
+            continue
+        function = child.child_by_field_name("function")
+        if function is not None and function.type == "identifier" and _text(function, source) == "next":
+            return True
+    return False
 
 
 def _is_inner_route_chain_call(node: Node, source: bytes) -> bool:
