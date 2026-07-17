@@ -271,6 +271,75 @@ def test_exported_router_factory_inherits_caller_application_prefix(tmp_path: Pa
     artifact_graph(artifact).validate()
 
 
+def test_direct_cjs_router_and_literal_require_mounts_are_resolved(tmp_path: Path):
+    tmp_path.joinpath("package.json").write_text(
+        json.dumps({"dependencies": {"express": "4.21.0"}}), encoding="utf-8"
+    )
+    app = tmp_path / "app.js"
+    index = tmp_path / "routes" / "index.js"
+    users = tmp_path / "routes" / "users.js"
+    index.parent.mkdir()
+    app.write_text(
+        'const express = require("express");\nconst app = express();\n'
+        'app.use(require("./routes"));\n',
+        encoding="utf-8",
+    )
+    index.write_text(
+        'const router = require("express").Router();\n'
+        'router.use("/api", require("./users"));\nmodule.exports = router;\n',
+        encoding="utf-8",
+    )
+    users.write_text(
+        'const router = require("express").Router();\n'
+        'router.get("/users/:id", handler);\nmodule.exports = router;\n',
+        encoding="utf-8",
+    )
+
+    artifact = ExpressAdapter().analyze(AdapterInput(tmp_path, (app, index, users)))
+
+    assert [(fact.method, fact.path, fact.span.path, fact.span.start_line) for fact in artifact.facts] == [
+        ("GET", "/api/users/:id", "routes/users.js", 2)
+    ]
+    artifact_graph(artifact).validate()
+
+
+def test_new_package_proven_express_router_is_resolved(tmp_path: Path):
+    tmp_path.joinpath("package.json").write_text(
+        json.dumps({"dependencies": {"express": "4.21.0"}}), encoding="utf-8"
+    )
+    source = tmp_path / "routes.js"
+    source.write_text(
+        'import express from "express";\nconst router = new express.Router();\n'
+        'router.get("/users", handler);\n',
+        encoding="utf-8",
+    )
+
+    artifact = ExpressAdapter().analyze(AdapterInput(tmp_path, (source,)))
+
+    assert [(fact.method, fact.path) for fact in artifact.facts] == [("GET", "/users")]
+    artifact_graph(artifact).validate()
+
+
+def test_direct_router_and_literal_mount_require_package_and_local_provenance(tmp_path: Path):
+    tmp_path.joinpath("package.json").write_text(
+        json.dumps({"dependencies": {"express": "4.21.0"}}), encoding="utf-8"
+    )
+    source = tmp_path / "routes.js"
+    source.write_text(
+        'const framework = require("not-express");\n'
+        'const router = framework.Router();\nrouter.get("/fake", handler);\n'
+        'const express = require("express");\nconst app = express();\n'
+        'app.use(prefix, require(moduleName));\n',
+        encoding="utf-8",
+    )
+
+    artifact = ExpressAdapter().analyze(AdapterInput(tmp_path, (source,)))
+
+    assert artifact.facts == ()
+    assert not any(subject.name == "router" for subject in artifact.subjects)
+    artifact_graph(artifact).validate()
+
+
 def artifact_graph(artifact):
     from authmapper.core.v2 import EvidenceGraph
 

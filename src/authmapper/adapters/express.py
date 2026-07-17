@@ -229,10 +229,26 @@ def _express_bindings(root: Node, source: bytes) -> tuple[tuple[str, Node], ...]
                 name is not None
                 and name.type == "identifier"
                 and value is not None
-                and _is_express_require(value, source)
+                and (_is_express_require(value, source) or _is_express_router_require(value, source))
             ):
                 bindings.append((_text(name, source), name))
     return tuple(bindings)
+
+
+def _is_express_router_require(node: Node, source: bytes) -> bool:
+    if node.type != "call_expression":
+        return False
+    function = node.child_by_field_name("function")
+    if function is None or function.type != "member_expression":
+        return False
+    obj = function.child_by_field_name("object")
+    prop = function.child_by_field_name("property")
+    return (
+        obj is not None
+        and prop is not None
+        and _text(prop, source) == "Router"
+        and _is_express_require(obj, source)
+    )
 
 
 def _source_is_active(item: _ParsedSource) -> bool:
@@ -354,16 +370,21 @@ def _external_mounts(
             call = _external_mount_call(function, arguments, item.source)
             if call is None:
                 continue
-            parent_name, prefix_node, middleware_nodes, child_name = call
+            parent_name, prefix_node, middleware_nodes, child_node = call
             callback_parent = callback_receivers.get((item.path, parent_name))
             parent = receivers.get((item.path, parent_name)) or callback_parent
+            child_name = _text(child_node, item.source)
             child_path = imports.get(child_name)
+            if child_path is None:
+                module = _local_require_module(child_node, item.source)
+                package_root = item.package_path.parent if item.package_path else project_root
+                child_path = resolve_local_module(item.path, module, package_root) if module is not None else None
             child = (
                 exports.get(child_path)
                 if child_path is not None
                 else receivers.get((item.path, child_name)) if callback_parent is not None else None
             )
-            prefix = _literal_string(prefix_node, item.source)
+            prefix = "" if prefix_node is None else _literal_string(prefix_node, item.source)
             if parent is None or child is None or prefix is None:
                 continue
             relation = Relation(
@@ -827,10 +848,24 @@ def _extract_file(item: _ParsedSource) -> _FileEvidence:
 def _receiver_kind(
     node: Node, source: bytes, express_names: set[str]
 ) -> tuple[SubjectKind, ScopeKind] | None:
+    if _is_express_router_require(node, source):
+        return SubjectKind.OBJECT_PROPERTY, ScopeKind.COMPONENT
     if node.type == "new_expression":
         constructor = node.child_by_field_name("constructor")
-        if constructor is not None and constructor.type == "identifier" and _text(constructor, source) in express_names:
+        if constructor is None:
+            return None
+        if constructor.type == "identifier" and _text(constructor, source) in express_names:
             return SubjectKind.OBJECT_PROPERTY, ScopeKind.APPLICATION
+        if constructor.type == "member_expression":
+            obj = constructor.child_by_field_name("object")
+            prop = constructor.child_by_field_name("property")
+            if (
+                obj is not None
+                and prop is not None
+                and _text(obj, source) in express_names
+                and _text(prop, source) == "Router"
+            ):
+                return SubjectKind.OBJECT_PROPERTY, ScopeKind.COMPONENT
         return None
     if node.type != "call_expression":
         return None
@@ -938,7 +973,7 @@ def _mount_call(function: Node, arguments: Node, source: bytes) -> tuple[str, No
 
 def _external_mount_call(
     function: Node, arguments: Node, source: bytes
-) -> tuple[str, Node, tuple[Node, ...], str] | None:
+) -> tuple[str, Node | None, tuple[Node, ...], Node] | None:
     if function.type != "member_expression":
         return None
     obj = function.child_by_field_name("object")
@@ -949,11 +984,25 @@ def _external_mount_call(
         or prop is None
         or obj.type != "identifier"
         or _text(prop, source) != "use"
-        or len(args) < 2
-        or args[-1].type != "identifier"
+        or not args
+        or args[-1].type not in {"identifier", "call_expression"}
     ):
         return None
-    return _text(obj, source), args[0], tuple(args[1:-1]), _text(args[-1], source)
+    if args[-1].type == "call_expression" and _local_require_module(args[-1], source) is None:
+        return None
+    if len(args) == 1:
+        return _text(obj, source), None, (), args[0]
+    return _text(obj, source), args[0], tuple(args[1:-1]), args[-1]
+
+
+def _local_require_module(node: Node, source: bytes) -> str | None:
+    if node.type != "call_expression":
+        return None
+    function = node.child_by_field_name("function")
+    arguments = node.child_by_field_name("arguments")
+    if function is None or arguments is None or _text(function, source) != "require":
+        return None
+    return _literal_string(_first_argument(arguments), source)
 
 
 def _middleware_call(function: Node, arguments: Node, source: bytes) -> tuple[str, Node] | None:
