@@ -905,8 +905,12 @@ def _route_call(function: Node, source: bytes) -> _RouteCall | None:
         if method == "use":
             handler_types = {"arrow_function", "function_expression"}
             if len(args) == 1 and args[0].type in handler_types:
+                if _continuation_middleware(args[0]):
+                    return None
                 return _RouteCall(_text(obj, source), ((method, arguments),), None)
             if len(args) >= 2 and args[-1].type in handler_types:
+                if _continuation_middleware(args[-1]):
+                    return None
                 return _RouteCall(_text(obj, source), ((method, arguments),), args[0])
             return None
         path_node = _first_argument(arguments)
@@ -936,6 +940,13 @@ def _route_call(function: Node, source: bytes) -> _RouteCall | None:
             return None
         return _RouteCall(_text(current_object, source), tuple(reversed(methods)), path_node)
     return None
+
+
+def _continuation_middleware(node: Node) -> bool:
+    parameters = node.child_by_field_name("parameters")
+    if parameters is None:
+        return False
+    return len(parameters.named_children) >= 3
 
 
 def _is_inner_route_chain_call(node: Node, source: bytes) -> bool:
@@ -1045,6 +1056,8 @@ def _middleware_name(
     custom_auth_names: dict[str, str],
 ) -> str:
     text = _text(node, source)
+    if node.type == "identifier" and _optional_auth_name(text):
+        return f"unresolved-auth:{text}"
     if node.type == "identifier" and text in custom_auth_names:
         semantic = custom_auth_names[text]
         return semantic if semantic.startswith("unresolved-auth:") else f"custom-auth:{semantic}"
@@ -1081,6 +1094,11 @@ def _middleware_name(
     if obj is not None and prop is not None and _text(obj, source) in passport_names:
         return f"passport.{_text(prop, source)}"
     return text
+
+
+def _optional_auth_name(name: str) -> bool:
+    normalized = name.lower().replace("_", "").replace("-", "")
+    return normalized in {"nonblockingauth", "optionalauth"}
 
 
 def _passport_authenticate_name(node: Node | None, source: bytes) -> str:

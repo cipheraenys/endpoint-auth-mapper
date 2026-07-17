@@ -340,6 +340,27 @@ def test_direct_router_and_literal_mount_require_package_and_local_provenance(tm
     artifact_graph(artifact).validate()
 
 
+def test_continuation_use_middleware_is_not_an_endpoint(tmp_path: Path):
+    tmp_path.joinpath("package.json").write_text(
+        json.dumps({"dependencies": {"express": "4.21.0"}}), encoding="utf-8"
+    )
+    source = tmp_path / "app.js"
+    source.write_text(
+        'const express = require("express");\nconst app = express();\n'
+        'app.use((req, res, next) => next());\n'
+        'app.use((err, req, res, next) => next(err));\n'
+        'app.use((req, res) => res.send("terminal"));\n',
+        encoding="utf-8",
+    )
+
+    artifact = ExpressAdapter().analyze(AdapterInput(tmp_path, (source,)))
+
+    assert [(fact.method, fact.path, fact.span.start_line) for fact in artifact.facts] == [
+        ("ALL", "/", 5)
+    ]
+    artifact_graph(artifact).validate()
+
+
 def artifact_graph(artifact):
     from authmapper.core.v2 import EvidenceGraph
 

@@ -171,6 +171,27 @@ def test_non_enforcement_handler_members_remain_unguarded(tmp_path: Path):
     assert [item.verdict for item in resolutions] == [EndpointVerdict.UNGUARDED] * 6
 
 
+def test_optional_auth_middleware_is_unresolved_without_proof(tmp_path: Path):
+    tmp_path.joinpath("optional-auth.js").write_text(
+        "module.exports = function nonBlockingAuth(req, res, next) { next(); };\n",
+        encoding="utf-8",
+    )
+    graph, resolutions = _resolve(
+        tmp_path,
+        'const express = require("express");\n'
+        'const nonBlockingAuth = require("./optional-auth");\n'
+        'const app = express();\n'
+        'app.get("/profile", nonBlockingAuth, handler);\n'
+        'app.get("/public", ordinaryMiddleware, handler);\n',
+    )
+
+    assert [item.verdict for item in resolutions] == [
+        EndpointVerdict.UNRESOLVED,
+        EndpointVerdict.UNGUARDED,
+    ]
+    assert not graph.proofs
+
+
 def test_versioned_public_declaration_requires_policy_owner_reason(tmp_path: Path):
     _, resolutions = _resolve(
         tmp_path,
