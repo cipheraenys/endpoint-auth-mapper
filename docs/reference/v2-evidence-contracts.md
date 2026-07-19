@@ -56,8 +56,8 @@ evidence.
 Current semantic graph and report contract is `2.1`, identified by
 `https://authmap.dev/schemas/evidence-report-2.1.json`. Callers select `2.1`
 explicitly when building a report document. Schema `2.0` remains bundled and
-byte-identical for existing documents; it does not accept the new ambiguity
-contract.
+byte-identical for existing documents. Current serializer does not emit `2.0`
+documents or ambiguity evidence under a `2.0` envelope.
 
 ## Legacy Boundary
 
