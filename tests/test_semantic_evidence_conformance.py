@@ -116,19 +116,22 @@ def _semantic_graph() -> EvidenceGraph:
         associations=_ordered(
             (
                 EvidenceAssociation(
-                    f"association:{evidence}",
+                    f"association:{association}",
                     f"fact:route:{endpoint}",
                     f"fact:{evidence}",
                     f"scope:route:{endpoint}",
                     EVIDENCE_SPAN,
                     tuple(sorted((f"fact:{evidence}", f"fact:route:{endpoint}"))),
                 )
-                for evidence, endpoint in (
-                    ("ambiguity", "ambiguous"),
-                    ("enforcement", "guarded"),
-                    ("identity", "ambiguous"),
-                    ("session", "ambiguous"),
-                    ("weak", "ambiguous"),
+                for association, evidence, endpoint in (
+                    ("ambiguity", "ambiguity", "ambiguous"),
+                    ("enforcement", "enforcement", "guarded"),
+                    ("identity", "identity", "identity"),
+                    ("identity:ambiguous", "identity", "ambiguous"),
+                    ("session", "session", "session"),
+                    ("session:ambiguous", "session", "ambiguous"),
+                    ("weak", "weak", "weak"),
+                    ("weak:ambiguous", "weak", "ambiguous"),
                 )
             )
         ),
