@@ -191,6 +191,11 @@ class EvidenceGraph:
             candidate.id for candidate in self.scopes if candidate.subject_id == endpoint.subject_id
         )
         scope_ids = {scope.id, scope.subject_id}
+        structural_node_ids = {
+            *(subject.id for subject in self.subjects),
+            *(candidate.id for candidate in self.scopes),
+            endpoint.id,
+        }
         direct_route_scope = (
             scope.kind is ScopeKind.ROUTE and scope.subject_id == endpoint.subject_id
         )
@@ -199,19 +204,19 @@ class EvidenceGraph:
             scope_ids,
             selected_relation_ids,
             relations_by_id,
+            structural_node_ids,
+            {endpoint.id},
         ):
             raise GraphValidationError(f"{association.id}: scope must belong to endpoint or have relation path")
 
         endpoint_region = endpoint_ids | _scope_region(scope, scopes_by_id)
-        evidence_region = {evidence.id, evidence.subject_id}
-        evidence_region.update(
-            candidate.id for candidate in self.scopes if candidate.subject_id == evidence.subject_id
-        )
         if not _relation_path_connects(
             endpoint_region,
-            evidence_region,
+            {evidence.subject_id},
             selected_relation_ids,
             relations_by_id,
+            structural_node_ids,
+            {endpoint.id},
         ):
             raise GraphValidationError(
                 f"{association.id}: {relation_path_label} must connect endpoint scope to evidence"
@@ -380,10 +385,19 @@ def _relation_path_connects(
     target_ids: set[str],
     relation_ids: tuple[str, ...],
     relations_by_id: dict[str, Relation],
+    allowed_node_ids: set[str],
+    start_only_node_ids: set[str],
 ) -> bool:
     adjacent: dict[str, set[str]] = {}
     for relation_id in relation_ids:
         relation = relations_by_id[relation_id]
+        # Facts are evidence terminals; only the endpoint declaration may anchor a structural path.
+        if (
+            relation.source_id not in allowed_node_ids
+            or relation.target_id not in allowed_node_ids
+            or relation.target_id in start_only_node_ids
+        ):
+            return False
         step = _forward_relation_step(relation)
         if step is None:
             continue

@@ -298,6 +298,174 @@ def test_unrelated_advisory_fact_does_not_taint_valid_enforcement_proof():
     assert resolve_endpoints(graph)[0].verdict is EndpointVerdict.GUARDED
 
 
+def _fact_bridge_graph(bridge_kind: FactKind, bridge_subject_id: str = "subject:route") -> EvidenceGraph:
+    graph = _guard_graph()
+    bridge = Fact("fact:bridge", bridge_kind, bridge_subject_id, SPAN)
+    relations = tuple(
+        sorted(
+            (
+                Relation("relation:bridge:route", RelationKind.REFERENCES, "subject:route", bridge.id, SPAN),
+                Relation("relation:bridge:auth", RelationKind.REFERENCES, bridge.id, "subject:auth", SPAN),
+            ),
+            key=lambda item: item.id,
+        )
+    )
+    association = replace(
+        graph.associations[0],
+        derived_from=("fact:auth", "fact:route", "relation:bridge:auth", "relation:bridge:route"),
+    )
+    proof = replace(
+        graph.proofs[0],
+        relation_ids=("relation:bridge:auth", "relation:bridge:route"),
+        derived_from=(
+            "association:auth",
+            "fact:auth",
+            "fact:route",
+            "relation:bridge:auth",
+            "relation:bridge:route",
+        ),
+    )
+    return replace(
+        graph,
+        facts=tuple(sorted((*graph.facts, bridge), key=lambda item: item.id)),
+        relations=relations,
+        associations=(association,),
+        proofs=(proof,),
+    )
+
+
+def test_graph_rejects_weak_fact_as_enforcement_relation_path_bridge():
+    graph = _fact_bridge_graph(FactKind.WEAK_INDICATOR)
+
+    with pytest.raises(GraphValidationError, match="relation path must connect endpoint scope to evidence"):
+        graph.validate()
+
+
+@pytest.mark.parametrize(
+    ("bridge_kind", "bridge_subject_id"),
+    (
+        (FactKind.AUTH_ENFORCEMENT, "subject:auth"),
+        (FactKind.AUTH_AMBIGUITY, "subject:route"),
+        (FactKind.IDENTITY_USE, "subject:route"),
+        (FactKind.SESSION_PRESENCE, "subject:route"),
+        (FactKind.ROUTING_PREDICATE, "subject:route"),
+        (FactKind.PUBLIC_DECLARATION, "subject:route"),
+    ),
+)
+def test_graph_rejects_other_fact_kinds_as_enforcement_relation_path_bridges(
+    bridge_kind: FactKind,
+    bridge_subject_id: str,
+):
+    graph = _fact_bridge_graph(bridge_kind, bridge_subject_id)
+
+    with pytest.raises(GraphValidationError, match="relation path must connect endpoint scope to evidence"):
+        graph.validate()
+
+
+@pytest.mark.parametrize("bridge_id", ("subject:bridge", "scope:bridge"))
+def test_graph_accepts_subject_or_scope_as_enforcement_relation_path_bridge(bridge_id: str):
+    graph = _guard_graph()
+    relations = tuple(
+        sorted(
+            (
+                Relation("relation:bridge:route", RelationKind.REFERENCES, "subject:route", bridge_id, SPAN),
+                Relation("relation:bridge:auth", RelationKind.REFERENCES, bridge_id, "subject:auth", SPAN),
+            ),
+            key=lambda item: item.id,
+        )
+    )
+    association = replace(
+        graph.associations[0],
+        derived_from=("fact:auth", "fact:route", "relation:bridge:auth", "relation:bridge:route"),
+    )
+    proof = replace(
+        graph.proofs[0],
+        relation_ids=("relation:bridge:auth", "relation:bridge:route"),
+        derived_from=(
+            "association:auth",
+            "fact:auth",
+            "fact:route",
+            "relation:bridge:auth",
+            "relation:bridge:route",
+        ),
+    )
+    graph = replace(
+        graph,
+        subjects=tuple(
+            sorted(
+                (*graph.subjects, Subject(bridge_id, SubjectKind.HANDLER, SPAN))
+                if bridge_id.startswith("subject:")
+                else graph.subjects,
+                key=lambda item: item.id,
+            )
+        ),
+        scopes=tuple(
+            sorted(
+                (*graph.scopes, Scope(bridge_id, ScopeKind.HANDLER, "subject:route", SPAN))
+                if bridge_id.startswith("scope:")
+                else graph.scopes,
+                key=lambda item: item.id,
+            )
+        ),
+        relations=relations,
+        associations=(association,),
+        proofs=(proof,),
+    )
+
+    graph.validate()
+    assert resolve_endpoints(graph)[0].verdict is EndpointVerdict.GUARDED
+
+
+def test_graph_accepts_endpoint_fact_as_enforcement_relation_path_anchor():
+    graph = _guard_graph()
+    relation = Relation("relation:auth", RelationKind.REFERENCES, "fact:route", "subject:auth", SPAN)
+    graph = replace(graph, relations=(relation,))
+
+    graph.validate()
+    assert resolve_endpoints(graph)[0].verdict is EndpointVerdict.GUARDED
+
+
+def test_graph_rejects_endpoint_fact_as_enforcement_relation_path_bridge():
+    graph = _guard_graph()
+    relations = (
+        Relation("relation:auth", RelationKind.REFERENCES, "fact:route", "subject:auth", SPAN),
+        Relation("relation:route", RelationKind.REFERENCES, "subject:route", "fact:route", SPAN),
+    )
+    association = replace(
+        graph.associations[0],
+        derived_from=("fact:auth", "fact:route", "relation:auth", "relation:route"),
+    )
+    proof = replace(
+        graph.proofs[0],
+        relation_ids=("relation:auth", "relation:route"),
+        derived_from=("association:auth", "fact:auth", "fact:route", "relation:auth", "relation:route"),
+    )
+    graph = replace(graph, relations=relations, associations=(association,), proofs=(proof,))
+
+    with pytest.raises(GraphValidationError, match="relation path must connect endpoint scope to evidence"):
+        graph.validate()
+
+
+def test_unrelated_fact_relations_do_not_taint_valid_enforcement_relation_path():
+    graph = _guard_graph()
+    unrelated = Fact("fact:unrelated", FactKind.WEAK_INDICATOR, "subject:route", SPAN)
+    unrelated_relation = Relation(
+        "relation:unrelated",
+        RelationKind.REFERENCES,
+        unrelated.id,
+        "subject:auth",
+        SPAN,
+    )
+    graph = replace(
+        graph,
+        facts=tuple(sorted((*graph.facts, unrelated), key=lambda item: item.id)),
+        relations=tuple(sorted((*graph.relations, unrelated_relation), key=lambda item: item.id)),
+    )
+
+    graph.validate()
+    assert resolve_endpoints(graph)[0].verdict is EndpointVerdict.GUARDED
+
+
 def test_graph_rejects_proof_association_with_wrong_route_scope():
     graph = _valid_graph()
     wrong_subject = Subject("subject:wrong-route", SubjectKind.ROUTE_CALL, SPAN)
