@@ -395,7 +395,45 @@ def _ambiguity_graph() -> EvidenceGraph:
 
 
 def test_graph_accepts_endpoint_bound_auth_ambiguity_shape():
-    _ambiguity_graph().validate()
+    graph = _ambiguity_graph()
+    endpoint = next(item for item in graph.facts if item.id == graph.associations[0].endpoint_id)
+    scope = next(item for item in graph.scopes if item.id == graph.associations[0].scope_id)
+
+    assert scope.subject_id == endpoint.subject_id
+    graph.validate()
+
+
+def test_graph_rejects_auth_ambiguity_association_using_another_endpoint_scope():
+    graph = _ambiguity_graph()
+    other_subject = Subject("subject:route:other", SubjectKind.ROUTE_CALL, SPAN)
+    other_endpoint = Fact(
+        "fact:route:other",
+        FactKind.ENDPOINT_DECLARATION,
+        other_subject.id,
+        SPAN,
+        method="GET",
+        path="/other",
+    )
+    other_scope = Scope("scope:route:other", ScopeKind.ROUTE, other_subject.id, SPAN)
+    association = EvidenceAssociation(
+        "association:ambiguity",
+        "fact:route",
+        "fact:ambiguity",
+        other_scope.id,
+        SPAN,
+        ("fact:ambiguity", "fact:route"),
+    )
+
+    with pytest.raises(GraphValidationError, match="ambiguity scope must belong to endpoint"):
+        EvidenceGraph(
+            subjects=tuple(sorted((*graph.subjects, other_subject), key=lambda item: item.id)),
+            facts=tuple(sorted((*graph.facts, other_endpoint), key=lambda item: item.id)),
+            scopes=tuple(sorted((*graph.scopes, other_scope), key=lambda item: item.id)),
+            associations=(association,),
+            unresolved=graph.unresolved,
+            capability_provenance=graph.capability_provenance,
+            coverage=graph.coverage,
+        ).validate()
 
 
 def test_graph_rejects_orphan_auth_ambiguity_fact():

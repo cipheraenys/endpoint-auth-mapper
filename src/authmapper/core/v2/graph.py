@@ -15,6 +15,7 @@ from .model import (
     Proof,
     ProofKind,
     Relation,
+    RelationKind,
     Scope,
     ScopeKind,
     Subject,
@@ -252,6 +253,12 @@ class EvidenceGraph:
                 )
 
         for association in ambiguity_associations.values():
+            endpoint = next(fact for fact in self.facts if fact.id == association.endpoint_id)
+            scope = next(scope for scope in self.scopes if scope.id == association.scope_id)
+            if scope.subject_id != endpoint.subject_id:
+                raise GraphValidationError(
+                    f"{association.id}: ambiguity scope must belong to endpoint"
+                )
             if not {association.endpoint_id, association.evidence_fact_id} <= set(association.derived_from):
                 raise GraphValidationError(
                     f"{association.id}: ambiguity association derivation must include endpoint and fact"
@@ -337,8 +344,11 @@ def _relation_path_connects(
     adjacent: dict[str, set[str]] = {}
     for relation_id in relation_ids:
         relation = relations_by_id[relation_id]
-        adjacent.setdefault(relation.source_id, set()).add(relation.target_id)
-        adjacent.setdefault(relation.target_id, set()).add(relation.source_id)
+        step = _forward_relation_step(relation)
+        if step is None:
+            continue
+        source_id, target_id = step
+        adjacent.setdefault(source_id, set()).add(target_id)
 
     seen = set(start_ids)
     pending = list(start_ids)
@@ -351,3 +361,9 @@ def _relation_path_connects(
                 seen.add(neighbor)
                 pending.append(neighbor)
     return False
+
+
+def _forward_relation_step(relation: Relation) -> tuple[str, str] | None:
+    if relation.kind in {RelationKind.CONTAINS, RelationKind.COMPOSES, RelationKind.REFERENCES}:
+        return relation.source_id, relation.target_id
+    return None

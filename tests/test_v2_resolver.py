@@ -16,6 +16,7 @@ from authmapper.core.v2 import (
     EvidenceGraph,
     Fact,
     FactKind,
+    GraphValidationError,
     Proof,
     ProofKind,
     Relation,
@@ -118,6 +119,27 @@ def test_guarded_requires_associated_auth_enforcement_proof():
 
     weak = _graph(FactKind.WEAK_INDICATOR, ProofKind.AUTH_ENFORCEMENT)
     assert resolve_endpoints(weak)[0].verdict is EndpointVerdict.UNRESOLVED
+
+
+@pytest.mark.parametrize(
+    "relation_kind",
+    (RelationKind.CONTAINS, RelationKind.COMPOSES, RelationKind.REFERENCES),
+)
+def test_reversed_enforcement_relation_cannot_fabricate_guard(relation_kind: RelationKind):
+    graph = _graph(FactKind.AUTH_ENFORCEMENT, ProofKind.AUTH_ENFORCEMENT)
+    reversed_relation = Relation(
+        "relation:evidence",
+        relation_kind,
+        "subject:evidence",
+        "subject:route",
+        SPAN,
+    )
+
+    with pytest.raises(
+        GraphValidationError,
+        match="relation path must connect endpoint scope to evidence",
+    ):
+        resolve_endpoints(replace(graph, relations=(reversed_relation,)))
 
 
 def test_mixed_valid_and_semantically_invalid_proofs_fail_closed():

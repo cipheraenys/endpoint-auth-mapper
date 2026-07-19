@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 from authmapper.adapters import ExpressAdapter, build_express_graph
-from authmapper.core.v2 import AdapterInput, EndpointVerdict, ProofKind, resolve_endpoints
+from authmapper.core.v2 import AdapterInput, EndpointVerdict, ProofKind, RelationKind, resolve_endpoints
 
 
 def _resolve(tmp_path: Path, source: str):
@@ -43,10 +43,17 @@ def test_exact_passport_import_and_route_middleware_proves_guard(tmp_path: Path)
         *graph.proofs[0].association_ids,
         *graph.proofs[0].relation_ids,
     } <= set(graph.proofs[0].derived_from)
+    relation = next(item for item in graph.relations if item.id == graph.proofs[0].relation_ids[0])
+    evidence = next(item for item in graph.facts if item.id == graph.proofs[0].fact_ids[0])
+    assert (relation.kind, relation.source_id, relation.target_id) == (
+        RelationKind.REFERENCES,
+        endpoint.subject_id,
+        evidence.subject_id,
+    )
 
 
 def test_late_middleware_does_not_protect_earlier_route(tmp_path: Path):
-    _, resolutions = _resolve(
+    graph, resolutions = _resolve(
         tmp_path,
         'import express from "express";\nimport passport from "passport";\nconst app = express();\n'
         'app.get("/early", handler);\napp.use(passport.authenticate("jwt"));\napp.get("/late", handler);\n',
@@ -54,6 +61,17 @@ def test_late_middleware_does_not_protect_earlier_route(tmp_path: Path):
 
     verdicts = {item.endpoint_id: item.verdict for item in resolutions}
     assert list(verdicts.values()) == [EndpointVerdict.UNGUARDED, EndpointVerdict.GUARDED]
+    guarded = resolutions[1]
+    proof = next(item for item in graph.proofs if item.endpoint_id == guarded.endpoint_id)
+    endpoint = next(item for item in graph.facts if item.id == guarded.endpoint_id)
+    route_scope = next(item for item in graph.scopes if item.subject_id == endpoint.subject_id)
+    evidence = next(item for item in graph.facts if item.id == proof.fact_ids[0])
+    relation = next(item for item in graph.relations if item.id == proof.relation_ids[0])
+    assert (relation.kind, relation.source_id, relation.target_id) == (
+        RelationKind.CONTAINS,
+        route_scope.parent_id,
+        evidence.subject_id,
+    )
 
 
 def test_auth_name_without_provenance_is_unresolved_not_guarded(tmp_path: Path):
