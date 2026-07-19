@@ -118,7 +118,8 @@ def test_guarded_requires_associated_auth_enforcement_proof():
     assert resolve_endpoints(graph)[0].verdict is EndpointVerdict.GUARDED
 
     weak = _graph(FactKind.WEAK_INDICATOR, ProofKind.AUTH_ENFORCEMENT)
-    assert resolve_endpoints(weak)[0].verdict is EndpointVerdict.UNRESOLVED
+    with pytest.raises(GraphValidationError, match="auth enforcement derivation includes advisory fact"):
+        resolve_endpoints(weak)
 
 
 @pytest.mark.parametrize(
@@ -234,6 +235,27 @@ def test_relation_free_public_policy_proof_declares_endpoint_public():
 
     assert resolution.verdict is EndpointVerdict.DECLARED_PUBLIC
     assert resolution.proof_ids == ("proof:result",)
+
+
+def test_advisory_public_policy_derivation_remains_unchanged():
+    graph = _graph(FactKind.PUBLIC_DECLARATION, ProofKind.PUBLIC_POLICY)
+    advisory = Fact(
+        "fact:advisory",
+        FactKind.WEAK_INDICATOR,
+        "subject:evidence",
+        SPAN,
+    )
+    proof = replace(
+        graph.proofs[0],
+        derived_from=tuple(sorted((*graph.proofs[0].derived_from, advisory.id))),
+    )
+    graph = replace(
+        graph,
+        facts=tuple(sorted((*graph.facts, advisory), key=lambda item: item.id)),
+        proofs=(proof,),
+    )
+
+    assert resolve_endpoints(graph)[0].verdict is EndpointVerdict.DECLARED_PUBLIC
 
 
 def test_explicit_unresolved_evidence_overrides_positive_proof():

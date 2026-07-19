@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 
 from authmapper.core.v2 import (
@@ -9,6 +11,7 @@ from authmapper.core.v2 import (
     CapabilityProvenance,
     CoverageRecord,
     CoverageStatus,
+    EndpointVerdict,
     EvidenceAssociation,
     EvidenceGraph,
     Fact,
@@ -24,6 +27,7 @@ from authmapper.core.v2 import (
     Subject,
     SubjectKind,
     UnresolvedRecord,
+    resolve_endpoints,
 )
 
 SPAN = SourceSpan("app.js", 1, 1, 1, 20)
@@ -66,6 +70,9 @@ def _guard_graph(
     *,
     enforcement_derived_from: tuple[str, ...] = (),
     additional_facts: tuple[Fact, ...] = (),
+    relation_derived_from: tuple[str, ...] = (),
+    association_derived_from: tuple[str, ...] | None = None,
+    proof_derived_from: tuple[str, ...] | None = None,
 ) -> EvidenceGraph:
     graph = _valid_graph()
     enforcement = Fact(
@@ -75,6 +82,15 @@ def _guard_graph(
         SPAN,
         derived_from=enforcement_derived_from,
     )
+    relation = replace(graph.relations[0], derived_from=relation_derived_from)
+    association = replace(
+        graph.associations[0],
+        derived_from=(
+            graph.associations[0].derived_from
+            if association_derived_from is None
+            else association_derived_from
+        ),
+    )
     proof = Proof(
         "proof:auth",
         ProofKind.AUTH_ENFORCEMENT,
@@ -82,15 +98,40 @@ def _guard_graph(
         (enforcement.id,),
         ("association:auth",),
         ("relation:auth",),
-        ("association:auth", enforcement.id, "fact:route", "relation:auth"),
+        (
+            ("association:auth", enforcement.id, "fact:route", "relation:auth")
+            if proof_derived_from is None
+            else proof_derived_from
+        ),
+    )
+    capability_provenance = tuple(
+        CapabilityProvenance(
+            f"provenance:{capability.value}",
+            capability,
+            "adapter:test",
+            "1.0.0",
+        )
+        for capability in Capability
+    )
+    coverage = tuple(
+        CoverageRecord(
+            f"coverage:{capability.value}",
+            "fact:route",
+            capability,
+            CoverageStatus.ANALYZED,
+            f"provenance:{capability.value}",
+        )
+        for capability in Capability
     )
     return EvidenceGraph(
         subjects=graph.subjects,
         facts=tuple(sorted((*additional_facts, enforcement, graph.facts[1]), key=lambda item: item.id)),
         scopes=graph.scopes,
-        relations=graph.relations,
-        associations=graph.associations,
+        relations=(relation,),
+        associations=(association,),
         proofs=(proof,),
+        capability_provenance=tuple(sorted(capability_provenance, key=lambda item: item.id)),
+        coverage=tuple(sorted(coverage, key=lambda item: item.id)),
     )
 
 
@@ -184,6 +225,77 @@ def test_graph_rejects_transitively_advisory_enforcement_derivation():
 
     with pytest.raises(GraphValidationError, match="auth enforcement derivation includes advisory fact"):
         graph.validate()
+
+
+@pytest.mark.parametrize(
+    "advisory_kind",
+    (
+        FactKind.AUTH_AMBIGUITY,
+        FactKind.IDENTITY_USE,
+        FactKind.SESSION_PRESENCE,
+        FactKind.WEAK_INDICATOR,
+    ),
+)
+@pytest.mark.parametrize("selected_entity", ("relation", "association", "proof"))
+@pytest.mark.parametrize("transitive", (False, True), ids=("direct", "transitive"))
+def test_graph_rejects_advisory_derivation_from_selected_entity(
+    advisory_kind: FactKind,
+    selected_entity: str,
+    transitive: bool,
+):
+    advisory = Fact("fact:advisory", advisory_kind, "subject:auth", SPAN)
+    intermediate = Fact(
+        "fact:derivation",
+        FactKind.ROUTING_PREDICATE,
+        "subject:auth",
+        SPAN,
+        derived_from=(advisory.id,),
+    )
+    tainted_derivation = (intermediate.id,) if transitive else (advisory.id,)
+    association_derivation = tuple(sorted(("fact:auth", "fact:route", "relation:auth", *tainted_derivation)))
+    proof_derivation = tuple(
+        sorted(("association:auth", "fact:auth", "fact:route", "relation:auth", *tainted_derivation))
+    )
+    ambiguity_association = EvidenceAssociation(
+        "association:ambiguity",
+        "fact:route",
+        advisory.id,
+        "scope:route",
+        SPAN,
+        (advisory.id, "fact:route"),
+    )
+    unresolved = UnresolvedRecord(
+        "unresolved:ambiguity",
+        "auth evidence cannot be proven",
+        "fact:route",
+        SPAN,
+        (ambiguity_association.id, advisory.id),
+    )
+    graph = _guard_graph(
+        additional_facts=(advisory, intermediate) if transitive else (advisory,),
+        relation_derived_from=tainted_derivation if selected_entity == "relation" else (),
+        association_derived_from=(
+            association_derivation if selected_entity == "association" else None
+        ),
+        proof_derived_from=proof_derivation if selected_entity == "proof" else None,
+    )
+    if advisory_kind is FactKind.AUTH_AMBIGUITY:
+        graph = replace(
+            graph,
+            associations=tuple(sorted((*graph.associations, ambiguity_association), key=lambda item: item.id)),
+            unresolved=(unresolved,),
+        )
+
+    with pytest.raises(GraphValidationError, match="auth enforcement derivation includes advisory fact"):
+        graph.validate()
+
+
+def test_unrelated_advisory_fact_does_not_taint_valid_enforcement_proof():
+    advisory = Fact("fact:advisory", FactKind.WEAK_INDICATOR, "subject:auth", SPAN)
+    graph = _guard_graph(additional_facts=(advisory,))
+
+    graph.validate()
+    assert resolve_endpoints(graph)[0].verdict is EndpointVerdict.GUARDED
 
 
 def test_graph_rejects_proof_association_with_wrong_route_scope():

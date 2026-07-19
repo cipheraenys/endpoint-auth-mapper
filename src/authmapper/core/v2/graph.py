@@ -321,8 +321,8 @@ class EvidenceGraph:
         for identifier in derivations:
             visit(identifier)
 
-    @staticmethod
     def _reject_advisory_enforcement_derivations(
+        self,
         facts_by_id: dict[str, Fact],
         derivations: dict[str, tuple[str, ...]],
     ) -> None:
@@ -342,10 +342,22 @@ class EvidenceGraph:
                     return True
             return False
 
-        for fact in facts_by_id.values():
-            if fact.kind is FactKind.AUTH_ENFORCEMENT and includes_advisory(fact.id):
+        for proof in self.proofs:
+            if proof.kind is not ProofKind.AUTH_ENFORCEMENT:
+                continue
+            selected_ids = (
+                *(
+                    fact_id
+                    for fact_id in proof.fact_ids
+                    if facts_by_id[fact_id].kind is FactKind.AUTH_ENFORCEMENT
+                ),
+                *proof.association_ids,
+                *proof.relation_ids,
+                proof.id,
+            )
+            if any(includes_advisory(identifier) for identifier in selected_ids):
                 raise GraphValidationError(
-                    f"{fact.id}: auth enforcement derivation includes advisory fact"
+                    f"{proof.id}: auth enforcement derivation includes advisory fact"
                 )
 
 
