@@ -24,6 +24,7 @@ htmlcov/
 .venv/
 venv/
 env/
+.worktrees/
 
 # --- Local agent workspaces -------------------------------------------------
 AGENTS.md
