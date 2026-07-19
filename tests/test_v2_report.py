@@ -200,6 +200,14 @@ def test_report_document_rejects_unknown_contract_version():
         report_document(evidence_report(), schema_version="2.0")
 
 
+def test_report_2_1_schema_accepts_every_fact_kind():
+    schema = json.loads(files("authmapper.schemas").joinpath("evidence-report-2.1.schema.json").read_text())
+
+    assert set(schema["$defs"]["fact"]["properties"]["kind"]["enum"]) == {
+        item.value for item in FactKind
+    }
+
+
 def test_fingerprints_are_algorithm_versioned_and_semantic():
     report = evidence_report()
     endpoint = next(fact for fact in report.graph.facts if fact.id == "fact:guarded")

@@ -67,7 +67,7 @@
         "kind": {
           "enum": [
             "endpoint_declaration", "route_identity", "auth_enforcement", "auth_ambiguity",
-            "public_declaration", "identity_use", "session_presence", "weak_indicator"
+            "public_declaration", "identity_use", "session_presence", "routing_predicate", "weak_indicator"
           ]
         },
         "subject_id": { "$ref": "#/$defs/id" },
