@@ -32,6 +32,7 @@ def test_legacy_states_are_not_translated_to_v2_verdicts():
 
     assert document["classification"] == "legacy_unverified"
     assert document["migration"] == "one-way"
+    assert document["target_contract"] == "evidence-report-2.1"
     assert [item["legacy_state"] for item in document["items"]] == ["PROTECTED", "EXPOSED"]
     assert all(item["v2_verdict"] is None for item in document["items"])
     assert all("no v2 evidence proof" in item["reason"] for item in document["items"])
