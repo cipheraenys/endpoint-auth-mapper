@@ -69,6 +69,7 @@
       ["scope:route", "route", "subject:route"]
     ],
     "relations": [
+      ["relation:handler", "references", "scope:route", "scope:handler", 0],
       ["relation:parameter", "contains", "scope:handler", "subject:parameter", 1],
       ["relation:type", "references", "subject:parameter", "subject:type", 2]
     ],

@@ -18,6 +18,8 @@ from authmapper.core.v2 import (
     FactKind,
     Proof,
     ProofKind,
+    Relation,
+    RelationKind,
     Scope,
     ScopeKind,
     SourceSpan,
@@ -37,10 +39,20 @@ def _graph(evidence_kind: FactKind | None = None, proof_kind: ProofKind | None =
         Fact("fact:route", FactKind.ENDPOINT_DECLARATION, "subject:route", SPAN, method="GET", path="/account")
     ]
     associations: tuple[EvidenceAssociation, ...] = ()
+    relations: tuple[Relation, ...] = ()
     proofs: tuple[Proof, ...] = ()
     if evidence_kind is not None:
         subjects.insert(0, Subject("subject:evidence", SubjectKind.POLICY, SPAN))
         facts.insert(0, Fact("fact:evidence", evidence_kind, "subject:evidence", SPAN))
+        relations = (
+            Relation(
+                "relation:evidence",
+                RelationKind.REFERENCES,
+                "subject:route",
+                "subject:evidence",
+                SPAN,
+            ),
+        )
         associations = (
             EvidenceAssociation(
                 "association:evidence",
@@ -48,7 +60,7 @@ def _graph(evidence_kind: FactKind | None = None, proof_kind: ProofKind | None =
                 "fact:evidence",
                 "scope:route",
                 SPAN,
-                ("fact:evidence", "fact:route"),
+                ("fact:evidence", "fact:route", "relation:evidence"),
             ),
         )
     if proof_kind is not None:
@@ -59,7 +71,8 @@ def _graph(evidence_kind: FactKind | None = None, proof_kind: ProofKind | None =
                 "fact:route",
                 ("fact:evidence",),
                 ("association:evidence",),
-                derived_from=("association:evidence", "fact:evidence"),
+                ("relation:evidence",),
+                ("association:evidence", "fact:evidence", "fact:route", "relation:evidence"),
             ),
         )
     provenance = tuple(
@@ -90,6 +103,7 @@ def _graph(evidence_kind: FactKind | None = None, proof_kind: ProofKind | None =
         subjects=tuple(subjects),
         facts=tuple(facts),
         scopes=(Scope("scope:route", ScopeKind.ROUTE, "subject:route", SPAN),),
+        relations=relations,
         associations=associations,
         proofs=proofs,
         capability_provenance=provenance,
@@ -104,6 +118,39 @@ def test_guarded_requires_associated_auth_enforcement_proof():
 
     weak = _graph(FactKind.WEAK_INDICATOR, ProofKind.AUTH_ENFORCEMENT)
     assert resolve_endpoints(weak)[0].verdict is EndpointVerdict.UNRESOLVED
+
+
+def test_mixed_valid_and_semantically_invalid_proofs_fail_closed():
+    graph = _graph(FactKind.AUTH_ENFORCEMENT, ProofKind.AUTH_ENFORCEMENT)
+    public = Fact("fact:public", FactKind.PUBLIC_DECLARATION, "subject:evidence", SPAN)
+    public_association = EvidenceAssociation(
+        "association:public",
+        "fact:route",
+        public.id,
+        "scope:route",
+        SPAN,
+        (public.id, "fact:route", "relation:evidence"),
+    )
+    malformed = Proof(
+        "proof:malformed",
+        ProofKind.AUTH_ENFORCEMENT,
+        "fact:route",
+        (public.id,),
+        (public_association.id,),
+        ("relation:evidence",),
+        (public_association.id, public.id, "fact:route", "relation:evidence"),
+    )
+    graph = replace(
+        graph,
+        facts=tuple(sorted((*graph.facts, public), key=lambda item: item.id)),
+        associations=tuple(sorted((*graph.associations, public_association), key=lambda item: item.id)),
+        proofs=tuple(sorted((*graph.proofs, malformed), key=lambda item: item.id)),
+    )
+
+    resolution = resolve_endpoints(graph)[0]
+
+    assert resolution.verdict is EndpointVerdict.UNRESOLVED
+    assert resolution.proof_ids == ()
 
 
 @pytest.mark.parametrize(

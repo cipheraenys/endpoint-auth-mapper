@@ -181,8 +181,16 @@ def _challenge_graph(case: dict[str, Any]) -> EvidenceGraph:
     proofs: tuple[Proof, ...] = ()
     if "association" in case:
         item = case["association"]
+        relation_ids = tuple(relation.id for relation in relations)
         associations = (
-            EvidenceAssociation(item[0], item[1], item[2], item[3], SPAN, tuple(sorted((item[1], item[2])))),
+            EvidenceAssociation(
+                item[0],
+                item[1],
+                item[2],
+                item[3],
+                SPAN,
+                tuple(sorted((item[1], item[2], *relation_ids))),
+            ),
         )
     if "proof" in case:
         item = case["proof"]
@@ -193,7 +201,8 @@ def _challenge_graph(case: dict[str, Any]) -> EvidenceGraph:
                 item[2],
                 (item[3],),
                 (item[4],),
-                derived_from=tuple(sorted((item[3], item[4]))),
+                relation_ids,
+                tuple(sorted((item[2], item[3], item[4], *relation_ids))),
             ),
         )
     return EvidenceGraph(subjects, facts, scopes, relations, associations, proofs)

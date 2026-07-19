@@ -47,10 +47,13 @@ def resolve_endpoints(graph: EvidenceGraph) -> tuple[EndpointResolution, ...]:
             for item in graph.unresolved
             if item.subject_id in {endpoint.id, endpoint.subject_id}
         )
-        valid_proofs = tuple(
+        endpoint_proofs = tuple(
             proof
             for proof in graph.proofs
-            if proof.endpoint_id == endpoint.id and _proof_is_valid(proof, facts, associations)
+            if proof.endpoint_id == endpoint.id
+        )
+        valid_proofs = tuple(
+            proof for proof in endpoint_proofs if _proof_is_valid(proof, facts, associations)
         )
         public_proofs = tuple(proof for proof in valid_proofs if proof.kind is ProofKind.PUBLIC_POLICY)
         guard_proofs = tuple(proof for proof in valid_proofs if proof.kind is ProofKind.AUTH_ENFORCEMENT)
@@ -62,7 +65,7 @@ def resolve_endpoints(graph: EvidenceGraph) -> tuple[EndpointResolution, ...]:
         unresolved_claim = bool(
             {FactKind.AUTH_ENFORCEMENT, FactKind.PUBLIC_DECLARATION} & associated_fact_kinds
         ) and not (public_proofs or guard_proofs)
-        invalid_proof = any(proof.endpoint_id == endpoint.id for proof in graph.proofs) and not valid_proofs
+        invalid_proof = len(valid_proofs) != len(endpoint_proofs)
 
         if unresolved or not complete or unresolved_claim or invalid_proof:
             verdict = EndpointVerdict.UNRESOLVED
@@ -98,9 +101,8 @@ def _proof_is_valid(proof: Proof, facts: dict, associations: dict) -> bool:
     evidence_ids = {fact_id for fact_id in proof.fact_ids if facts[fact_id].kind is required_fact_kind}
     if not evidence_ids or not proof.association_ids:
         return False
-    return any(
-        association_id in associations
-        and associations[association_id].endpoint_id == proof.endpoint_id
+    return all(
+        associations[association_id].endpoint_id == proof.endpoint_id
         and associations[association_id].evidence_fact_id in evidence_ids
         for association_id in proof.association_ids
     )

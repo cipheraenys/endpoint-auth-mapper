@@ -30,6 +30,8 @@ from authmapper.core.v2 import (
     InvocationProvenance,
     Proof,
     ProofKind,
+    Relation,
+    RelationKind,
     ReportedCapability,
     Scope,
     ScopeKind,
@@ -85,12 +87,25 @@ def _report(
     facts = [endpoint]
     associations = []
     proofs = []
+    relations = []
     unresolved = []
     scope = Scope("scope:route", ScopeKind.ROUTE, "subject:route", SPAN)
     if verdict is EndpointVerdict.GUARDED:
         auth = Fact("fact:auth", FactKind.AUTH_ENFORCEMENT, "subject:route", SPAN)
+        relation = Relation(
+            "relation:auth",
+            RelationKind.REFERENCES,
+            scope.id,
+            auth.subject_id,
+            SPAN,
+        )
         association = EvidenceAssociation(
-            "association:auth", endpoint.id, auth.id, scope.id, SPAN, tuple(sorted((auth.id, endpoint.id)))
+            "association:auth",
+            endpoint.id,
+            auth.id,
+            scope.id,
+            SPAN,
+            tuple(sorted((auth.id, endpoint.id, relation.id))),
         )
         proof = Proof(
             "proof:auth",
@@ -98,7 +113,7 @@ def _report(
             endpoint.id,
             (auth.id,),
             (association.id,),
-            (),
+            (relation.id,),
             tuple(
                 sorted(
                     (
@@ -106,17 +121,31 @@ def _report(
                         auth.id,
                         endpoint.id,
                         "provenance:express:auth_association",
+                        relation.id,
                     )
                 )
             ),
         )
         facts.append(auth)
+        relations.append(relation)
         associations.append(association)
         proofs.append(proof)
     elif verdict is EndpointVerdict.DECLARED_PUBLIC:
         public = Fact("fact:public", FactKind.PUBLIC_DECLARATION, "subject:route", SPAN)
+        relation = Relation(
+            "relation:public",
+            RelationKind.REFERENCES,
+            scope.id,
+            public.subject_id,
+            SPAN,
+        )
         association = EvidenceAssociation(
-            "association:public", endpoint.id, public.id, scope.id, SPAN, tuple(sorted((endpoint.id, public.id)))
+            "association:public",
+            endpoint.id,
+            public.id,
+            scope.id,
+            SPAN,
+            tuple(sorted((endpoint.id, public.id, relation.id))),
         )
         proof = Proof(
             "proof:public",
@@ -124,10 +153,11 @@ def _report(
             endpoint.id,
             (public.id,),
             (association.id,),
-            (),
-            tuple(sorted((association.id, endpoint.id, public.id))),
+            (relation.id,),
+            tuple(sorted((association.id, endpoint.id, public.id, relation.id))),
         )
         facts.append(public)
+        relations.append(relation)
         associations.append(association)
         proofs.append(proof)
     elif verdict is EndpointVerdict.UNRESOLVED and coverage_status is CoverageStatus.ANALYZED:
@@ -153,6 +183,7 @@ def _report(
         subjects=(Subject("subject:route", SubjectKind.ROUTE_CALL, SPAN),),
         facts=tuple(sorted(facts, key=lambda item: item.id)),
         scopes=(scope,),
+        relations=tuple(relations),
         associations=tuple(associations),
         proofs=tuple(proofs),
         unresolved=tuple(unresolved),

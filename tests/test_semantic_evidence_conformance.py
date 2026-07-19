@@ -25,6 +25,8 @@ from authmapper.core.v2 import (
     InvocationProvenance,
     Proof,
     ProofKind,
+    Relation,
+    RelationKind,
     Scope,
     ScopeKind,
     SourceSpan,
@@ -113,6 +115,15 @@ def _semantic_graph() -> EvidenceGraph:
             Scope(f"scope:route:{name}", ScopeKind.ROUTE, f"subject:route:{name}", ENDPOINT_SPAN)
             for name in endpoints
         ),
+        relations=(
+            Relation(
+                "relation:enforcement",
+                RelationKind.REFERENCES,
+                "subject:route:guarded",
+                "subject:enforcement",
+                EVIDENCE_SPAN,
+            ),
+        ),
         associations=_ordered(
             (
                 EvidenceAssociation(
@@ -121,7 +132,15 @@ def _semantic_graph() -> EvidenceGraph:
                     f"fact:{evidence}",
                     f"scope:route:{endpoint}",
                     EVIDENCE_SPAN,
-                    tuple(sorted((f"fact:{evidence}", f"fact:route:{endpoint}"))),
+                    tuple(
+                        sorted(
+                            (
+                                f"fact:{evidence}",
+                                f"fact:route:{endpoint}",
+                                *(("relation:enforcement",) if evidence == "enforcement" else ()),
+                            )
+                        )
+                    ),
                 )
                 for association, evidence, endpoint in (
                     ("ambiguity", "ambiguity", "ambiguous"),
@@ -142,7 +161,13 @@ def _semantic_graph() -> EvidenceGraph:
                 "fact:route:guarded",
                 ("fact:enforcement",),
                 ("association:enforcement",),
-                derived_from=("association:enforcement", "fact:enforcement"),
+                ("relation:enforcement",),
+                (
+                    "association:enforcement",
+                    "fact:enforcement",
+                    "fact:route:guarded",
+                    "relation:enforcement",
+                ),
             ),
         ),
         unresolved=(
@@ -247,6 +272,7 @@ def test_ambiguity_derivation_cannot_mix_fact_and_endpoint_across_associations()
         subjects=graph.subjects,
         facts=_ordered((*graph.facts, second_ambiguity)),
         scopes=graph.scopes,
+        relations=graph.relations,
         associations=_ordered((*graph.associations, second_association)),
         proofs=graph.proofs,
         unresolved=unresolved,

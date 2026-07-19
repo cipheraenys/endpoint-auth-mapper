@@ -14,6 +14,10 @@ from authmapper.core.v2 import (
     Fact,
     FactKind,
     GraphValidationError,
+    Proof,
+    ProofKind,
+    Relation,
+    RelationKind,
     Scope,
     ScopeKind,
     SourceSpan,
@@ -36,6 +40,15 @@ def _valid_graph() -> EvidenceGraph:
             Fact("fact:route", FactKind.ENDPOINT_DECLARATION, "subject:route", SPAN, method="GET", path="/users"),
         ),
         scopes=(Scope("scope:route", ScopeKind.ROUTE, "subject:route", SPAN),),
+        relations=(
+            Relation(
+                "relation:auth",
+                RelationKind.REFERENCES,
+                "subject:route",
+                "subject:auth",
+                SPAN,
+            ),
+        ),
         associations=(
             EvidenceAssociation(
                 "association:auth",
@@ -43,7 +56,7 @@ def _valid_graph() -> EvidenceGraph:
                 "fact:auth",
                 "scope:route",
                 SPAN,
-                ("fact:auth", "fact:route"),
+                ("fact:auth", "fact:route", "relation:auth"),
             ),
         ),
     )
@@ -51,6 +64,107 @@ def _valid_graph() -> EvidenceGraph:
 
 def test_valid_graph_accepts_sorted_referenced_evidence():
     _valid_graph().validate()
+
+
+def test_graph_rejects_proof_association_with_wrong_route_scope():
+    graph = _valid_graph()
+    wrong_subject = Subject("subject:wrong-route", SubjectKind.ROUTE_CALL, SPAN)
+    wrong_scope = Scope("scope:wrong-route", ScopeKind.ROUTE, wrong_subject.id, SPAN)
+    association = EvidenceAssociation(
+        "association:auth",
+        "fact:route",
+        "fact:auth",
+        wrong_scope.id,
+        SPAN,
+        ("fact:auth", "fact:route", "relation:auth"),
+    )
+
+    with pytest.raises(GraphValidationError, match="scope must belong to endpoint"):
+        EvidenceGraph(
+            subjects=tuple(sorted((*graph.subjects, wrong_subject), key=lambda item: item.id)),
+            facts=graph.facts,
+            scopes=(wrong_scope,),
+            relations=graph.relations,
+            associations=(association,),
+        ).validate()
+
+
+def test_graph_rejects_proof_association_with_weak_only_derivation():
+    graph = _valid_graph()
+    association = graph.associations[0]
+
+    with pytest.raises(
+        GraphValidationError,
+        match="association derivation must include endpoint, evidence, and relation",
+    ):
+        EvidenceGraph(
+            subjects=graph.subjects,
+            facts=graph.facts,
+            scopes=graph.scopes,
+            associations=(
+                EvidenceAssociation(
+                    association.id,
+                    association.endpoint_id,
+                    association.evidence_fact_id,
+                    association.scope_id,
+                    association.span,
+                    ("fact:auth", "fact:route"),
+                ),
+            ),
+        ).validate()
+
+
+def test_graph_rejects_proof_relation_that_does_not_connect_evidence():
+    graph = _valid_graph()
+    unrelated = Subject("subject:unrelated", SubjectKind.POLICY, SPAN)
+    relation = Relation(
+        "relation:unrelated",
+        RelationKind.REFERENCES,
+        "subject:route",
+        unrelated.id,
+        SPAN,
+    )
+    association = EvidenceAssociation(
+        "association:auth",
+        "fact:route",
+        "fact:auth",
+        "scope:route",
+        SPAN,
+        ("fact:auth", "fact:route", relation.id),
+    )
+
+    with pytest.raises(GraphValidationError, match="relation path must connect endpoint scope to evidence"):
+        EvidenceGraph(
+            subjects=tuple(sorted((*graph.subjects, unrelated), key=lambda item: item.id)),
+            facts=graph.facts,
+            scopes=graph.scopes,
+            relations=(relation,),
+            associations=(association,),
+        ).validate()
+
+
+def test_graph_rejects_proof_with_incomplete_derivation():
+    graph = _valid_graph()
+
+    with pytest.raises(GraphValidationError, match="proof derivation must include selected evidence path"):
+        EvidenceGraph(
+            subjects=graph.subjects,
+            facts=graph.facts,
+            scopes=graph.scopes,
+            relations=graph.relations,
+            associations=graph.associations,
+            proofs=(
+                Proof(
+                    "proof:auth",
+                    ProofKind.AUTH_ENFORCEMENT,
+                    "fact:route",
+                    ("fact:auth",),
+                    ("association:auth",),
+                    ("relation:auth",),
+                    ("association:auth", "fact:auth", "relation:auth"),
+                ),
+            ),
+        ).validate()
 
 
 def test_graph_rejects_duplicate_and_unstable_ids():
@@ -107,6 +221,7 @@ def test_graph_rejects_coverage_capability_that_does_not_match_provenance():
         subjects=graph.subjects,
         facts=graph.facts,
         scopes=graph.scopes,
+        relations=graph.relations,
         associations=graph.associations,
         capability_provenance=(
             CapabilityProvenance(
@@ -166,6 +281,17 @@ def _ambiguity_graph() -> EvidenceGraph:
 
 def test_graph_accepts_endpoint_bound_auth_ambiguity_shape():
     _ambiguity_graph().validate()
+
+
+def test_graph_rejects_orphan_auth_ambiguity_fact():
+    graph = _ambiguity_graph()
+
+    with pytest.raises(GraphValidationError, match="ambiguity fact needs endpoint association"):
+        EvidenceGraph(
+            subjects=graph.subjects,
+            facts=graph.facts,
+            scopes=graph.scopes,
+        ).validate()
 
 
 def test_graph_rejects_associated_auth_ambiguity_without_matching_unresolved():

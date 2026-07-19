@@ -30,6 +30,19 @@ def test_exact_passport_import_and_route_middleware_proves_guard(tmp_path: Path)
 
     assert [item.verdict for item in resolutions] == [EndpointVerdict.GUARDED]
     assert len(graph.proofs) == 1
+    endpoint = next(item for item in graph.facts if item.id == graph.proofs[0].endpoint_id)
+    association = next(
+        item for item in graph.associations if item.id == graph.proofs[0].association_ids[0]
+    )
+    assert endpoint.id in association.derived_from
+    assert association.evidence_fact_id in association.derived_from
+    assert set(graph.proofs[0].relation_ids) <= set(association.derived_from)
+    assert {
+        endpoint.id,
+        *graph.proofs[0].fact_ids,
+        *graph.proofs[0].association_ids,
+        *graph.proofs[0].relation_ids,
+    } <= set(graph.proofs[0].derived_from)
 
 
 def test_late_middleware_does_not_protect_earlier_route(tmp_path: Path):
