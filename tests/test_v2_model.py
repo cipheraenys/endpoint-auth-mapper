@@ -66,3 +66,7 @@ def test_subject_contract_covers_callable_member_and_type_evidence():
         CoverageStatus.SKIPPED,
         CoverageStatus.ERROR,
     }
+
+
+def test_fact_kinds_include_serializable_auth_ambiguity():
+    assert FactKind.AUTH_AMBIGUITY.value == "auth_ambiguity"

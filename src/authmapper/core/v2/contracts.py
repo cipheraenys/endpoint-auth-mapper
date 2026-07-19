@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-FACT_GRAPH_VERSION = "2.0"
-REPORT_SCHEMA_VERSION = "2.0"
-REPORT_SCHEMA_ID = "https://authmap.dev/schemas/evidence-report-2.0.json"
+FACT_GRAPH_VERSION = "2.1"
+REPORT_SCHEMA_VERSION = "2.1"
+REPORT_SCHEMA_ID = "https://authmap.dev/schemas/evidence-report-2.1.json"
 SARIF_MAPPING_VERSION = "1.0"
 CONFIG_SCHEMA_VERSION = "1.0"
 EVIDENCE_POLICY_SCHEMA_ID = "https://authmap.dev/schemas/evidence-policy-1.0.json"

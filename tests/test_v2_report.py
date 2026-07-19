@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from importlib.resources import files
 
+import pytest
 from jsonschema import Draft202012Validator
 
 from authmapper.core.v2 import (
+    FACT_GRAPH_VERSION,
     REPORT_SCHEMA_ID,
+    REPORT_SCHEMA_VERSION,
     Capability,
     CapabilityProvenance,
     CoverageRecord,
@@ -31,6 +35,7 @@ from authmapper.core.v2 import (
     UnresolvedRecord,
     endpoint_fingerprint,
     proof_fingerprint,
+    report_document,
     resolve_endpoints,
 )
 from authmapper.reporters.v2_json_reporter import render_evidence_json
@@ -160,18 +165,39 @@ def test_evidence_json_is_deterministic_and_schema_valid():
     first = render_evidence_json(report)
     second = render_evidence_json(report)
     document = json.loads(first)
-    schema = json.loads(files("authmapper.schemas").joinpath("evidence-report-2.0.schema.json").read_text())
+    schema = json.loads(files("authmapper.schemas").joinpath("evidence-report-2.1.schema.json").read_text())
 
     Draft202012Validator.check_schema(schema)
     Draft202012Validator(schema).validate(document)
     assert first == second
     assert document["$schema"] == REPORT_SCHEMA_ID
-    assert document["schema_version"] == "2.0"
-    assert document["fact_graph_version"] == "2.0"
+    assert document["schema_version"] == REPORT_SCHEMA_VERSION == "2.1"
+    assert document["fact_graph_version"] == FACT_GRAPH_VERSION == "2.1"
     assert document["endpoint_resolutions"][0]["verdict"] == "GUARDED"
     assert document["endpoint_resolutions"][1]["verdict"] == "UNRESOLVED"
     assert document["graph"]["diagnostics"][0]["code"] == "AM-DYNAMIC-ROUTE"
     assert document["graph"]["coverage"][-1]["status"] == "analyzed"
+
+
+def test_report_2_0_schema_remains_byte_identical():
+    schema_bytes = files("authmapper.schemas").joinpath("evidence-report-2.0.schema.json").read_bytes()
+
+    assert hashlib.sha256(schema_bytes).hexdigest() == (
+        "6354b7eea6d31fb0777b762994987d38b743f03e270c5d71b2a796e67ce0316b"
+    )
+
+
+def test_report_document_explicitly_selects_current_2_1_contract():
+    document = report_document(evidence_report(), schema_version="2.1")
+
+    assert document["$schema"] == "https://authmap.dev/schemas/evidence-report-2.1.json"
+    assert document["schema_version"] == "2.1"
+    assert document["fact_graph_version"] == "2.1"
+
+
+def test_report_document_rejects_unknown_contract_version():
+    with pytest.raises(ValueError, match="unsupported report schema version"):
+        report_document(evidence_report(), schema_version="2.0")
 
 
 def test_fingerprints_are_algorithm_versioned_and_semantic():

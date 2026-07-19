@@ -17,12 +17,14 @@ from authmapper.core.v2 import (
 def test_semantic_kinds_distinguish_enforcement_from_weak_evidence():
     assert set(SemanticKind) == {
         SemanticKind.AUTH_ENFORCEMENT,
+        SemanticKind.AUTH_AMBIGUITY,
         SemanticKind.PUBLIC_OVERRIDE,
         SemanticKind.IDENTITY_USE,
         SemanticKind.SESSION_PRESENCE,
         SemanticKind.ROUTING_PREDICATE,
         SemanticKind.WEAK_INDICATOR,
     }
+    assert SemanticKind.AUTH_AMBIGUITY.value == "auth_ambiguity"
 
 
 def test_semantic_rule_has_typed_sorted_subjects():

@@ -10,6 +10,7 @@ from .model import SubjectKind
 
 class SemanticKind(str, Enum):
     AUTH_ENFORCEMENT = "auth_enforcement"
+    AUTH_AMBIGUITY = "auth_ambiguity"
     PUBLIC_OVERRIDE = "public_override"
     IDENTITY_USE = "identity_use"
     SESSION_PRESENCE = "session_presence"

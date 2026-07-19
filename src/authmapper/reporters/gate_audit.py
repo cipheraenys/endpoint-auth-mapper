@@ -8,7 +8,7 @@ from enum import Enum
 from typing import Any
 
 from authmapper.app.evidence_gate import EvidenceGateRun
-from authmapper.core.v2 import EvidencePolicy, EvidenceReport
+from authmapper.core.v2 import REPORT_SCHEMA_VERSION, EvidencePolicy, EvidenceReport
 from authmapper.core.v2.report import report_document
 
 
@@ -32,7 +32,7 @@ def gate_audit_document(
             "advisories": [_value(item) for item in run.gate.advisories],
         },
         "exception_audit": [_value(item) for item in run.exception_audit],
-        "evidence_report": report_document(report),
+        "evidence_report": report_document(report, schema_version=REPORT_SCHEMA_VERSION),
     }
 
 

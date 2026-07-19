@@ -48,7 +48,13 @@ class EvidenceReport:
             raise ValueError("reported capabilities must be unique and ordered")
 
 
-def report_document(report: EvidenceReport) -> dict[str, Any]:
+def report_document(
+    report: EvidenceReport,
+    *,
+    schema_version: str,
+) -> dict[str, Any]:
+    if schema_version != REPORT_SCHEMA_VERSION:
+        raise ValueError(f"unsupported report schema version: {schema_version}")
     facts = {fact.id: fact for fact in report.graph.facts}
     proofs = {proof.id: proof for proof in report.graph.proofs}
     resolutions = []
@@ -63,7 +69,7 @@ def report_document(report: EvidenceReport) -> dict[str, Any]:
 
     return {
         "$schema": REPORT_SCHEMA_ID,
-        "schema_version": REPORT_SCHEMA_VERSION,
+        "schema_version": schema_version,
         "fact_graph_version": FACT_GRAPH_VERSION,
         "tool": {"name": "endpoint-auth-mapper", "version": report.invocation.tool_version},
         "invocation": _value(report.invocation),

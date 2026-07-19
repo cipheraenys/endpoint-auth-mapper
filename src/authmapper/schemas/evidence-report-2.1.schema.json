@@ -1,0 +1,183 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://authmap.dev/schemas/evidence-report-2.1.json",
+  "title": "Authmap evidence report 2.1",
+  "type": "object",
+  "properties": {
+    "$schema": { "const": "https://authmap.dev/schemas/evidence-report-2.1.json" },
+    "schema_version": { "const": "2.1" },
+    "fact_graph_version": { "const": "2.1" },
+    "tool": {
+      "type": "object",
+      "properties": {
+        "name": { "const": "endpoint-auth-mapper" },
+        "version": { "type": "string", "minLength": 1 }
+      },
+      "required": ["name", "version"],
+      "additionalProperties": false
+    },
+    "invocation": { "$ref": "#/$defs/invocation" },
+    "graph": { "$ref": "#/$defs/graph" },
+    "endpoint_resolutions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/resolution" }
+    }
+  },
+  "required": ["$schema", "schema_version", "fact_graph_version", "tool", "invocation", "graph", "endpoint_resolutions"],
+  "additionalProperties": false,
+  "$defs": {
+    "id": { "type": "string", "minLength": 1 },
+    "idArray": { "type": "array", "items": { "$ref": "#/$defs/id" }, "uniqueItems": true },
+    "span": {
+      "type": "object",
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "start_line": { "type": "integer", "minimum": 1 },
+        "start_column": { "type": "integer", "minimum": 1 },
+        "end_line": { "type": "integer", "minimum": 1 },
+        "end_column": { "type": "integer", "minimum": 1 }
+      },
+      "required": ["path", "start_line", "start_column", "end_line", "end_column"],
+      "additionalProperties": false
+    },
+    "invocation": {
+      "type": "object",
+      "properties": {
+        "command_line": { "type": "array", "items": { "type": "string" } },
+        "working_directory": { "type": "string" },
+        "tool_version": { "type": "string", "minLength": 1 },
+        "vcs_uri": { "type": ["string", "null"] },
+        "vcs_revision": { "type": ["string", "null"] }
+      },
+      "required": ["command_line", "working_directory", "tool_version", "vcs_uri", "vcs_revision"],
+      "additionalProperties": false
+    },
+    "subject": {
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "#/$defs/id" }, "kind": { "type": "string" }, "span": { "$ref": "#/$defs/span" },
+        "name": { "type": ["string", "null"] }, "parent_id": { "type": ["string", "null"] }
+      },
+      "required": ["id", "kind", "span", "name", "parent_id"], "additionalProperties": false
+    },
+    "fact": {
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "kind": {
+          "enum": [
+            "endpoint_declaration", "route_identity", "auth_enforcement", "auth_ambiguity",
+            "public_declaration", "identity_use", "session_presence", "weak_indicator"
+          ]
+        },
+        "subject_id": { "$ref": "#/$defs/id" },
+        "span": { "$ref": "#/$defs/span" }, "derived_from": { "$ref": "#/$defs/idArray" },
+        "method": { "type": ["string", "null"] }, "path": { "type": ["string", "null"] }
+      },
+      "required": ["id", "kind", "subject_id", "span", "derived_from", "method", "path"], "additionalProperties": false
+    },
+    "scope": {
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "#/$defs/id" }, "kind": { "type": "string" }, "subject_id": { "$ref": "#/$defs/id" },
+        "span": { "$ref": "#/$defs/span" }, "parent_id": { "type": ["string", "null"] }, "derived_from": { "$ref": "#/$defs/idArray" }
+      },
+      "required": ["id", "kind", "subject_id", "span", "parent_id", "derived_from"], "additionalProperties": false
+    },
+    "relation": {
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "#/$defs/id" }, "kind": { "type": "string" }, "source_id": { "$ref": "#/$defs/id" },
+        "target_id": { "$ref": "#/$defs/id" }, "span": { "$ref": "#/$defs/span" },
+        "derived_from": { "$ref": "#/$defs/idArray" }, "order": { "type": ["integer", "null"] }
+      },
+      "required": ["id", "kind", "source_id", "target_id", "span", "derived_from", "order"], "additionalProperties": false
+    },
+    "association": {
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "#/$defs/id" }, "endpoint_id": { "$ref": "#/$defs/id" }, "evidence_fact_id": { "$ref": "#/$defs/id" },
+        "scope_id": { "$ref": "#/$defs/id" }, "span": { "$ref": "#/$defs/span" }, "derived_from": { "$ref": "#/$defs/idArray" }
+      },
+      "required": ["id", "endpoint_id", "evidence_fact_id", "scope_id", "span", "derived_from"], "additionalProperties": false
+    },
+    "proof": {
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "#/$defs/id" }, "kind": { "type": "string" }, "endpoint_id": { "$ref": "#/$defs/id" },
+        "fact_ids": { "$ref": "#/$defs/idArray" }, "association_ids": { "$ref": "#/$defs/idArray" },
+        "relation_ids": { "$ref": "#/$defs/idArray" }, "derived_from": { "$ref": "#/$defs/idArray" }
+      },
+      "required": ["id", "kind", "endpoint_id", "fact_ids", "association_ids", "relation_ids", "derived_from"], "additionalProperties": false
+    },
+    "unresolved": {
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "#/$defs/id" }, "reason": { "type": "string", "minLength": 1 }, "subject_id": { "type": ["string", "null"] },
+        "span": { "$ref": "#/$defs/span" }, "derived_from": { "$ref": "#/$defs/idArray" }
+      },
+      "required": ["id", "reason", "subject_id", "span", "derived_from"], "additionalProperties": false
+    },
+    "diagnostic": {
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "#/$defs/id" }, "code": { "type": "string" }, "message": { "type": "string" }, "level": { "enum": ["info", "warning", "error"] },
+        "span": { "oneOf": [{ "$ref": "#/$defs/span" }, { "type": "null" }] }, "subject_id": { "type": ["string", "null"] },
+        "derived_from": { "$ref": "#/$defs/idArray" }
+      },
+      "required": ["id", "code", "message", "level", "span", "subject_id", "derived_from"], "additionalProperties": false
+    },
+    "provenance": {
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "#/$defs/id" }, "capability": { "type": "string" }, "adapter_id": { "type": "string" },
+        "adapter_version": { "type": "string" }, "rule_ids": { "$ref": "#/$defs/idArray" }
+      },
+      "required": ["id", "capability", "adapter_id", "adapter_version", "rule_ids"], "additionalProperties": false
+    },
+    "coverage": {
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "#/$defs/id" }, "target_id": { "$ref": "#/$defs/id" }, "capability": { "type": "string" },
+        "status": { "enum": ["analyzed", "excluded", "unsupported", "skipped", "error"] }, "provenance_id": { "$ref": "#/$defs/id" },
+        "reason": { "type": ["string", "null"] }
+      },
+      "required": ["id", "target_id", "capability", "status", "provenance_id", "reason"], "additionalProperties": false
+    },
+    "graph": {
+      "type": "object",
+      "properties": {
+        "subjects": { "type": "array", "items": { "$ref": "#/$defs/subject" } },
+        "facts": { "type": "array", "items": { "$ref": "#/$defs/fact" } },
+        "scopes": { "type": "array", "items": { "$ref": "#/$defs/scope" } },
+        "relations": { "type": "array", "items": { "$ref": "#/$defs/relation" } },
+        "associations": { "type": "array", "items": { "$ref": "#/$defs/association" } },
+        "proofs": { "type": "array", "items": { "$ref": "#/$defs/proof" } },
+        "unresolved": { "type": "array", "items": { "$ref": "#/$defs/unresolved" } },
+        "diagnostics": { "type": "array", "items": { "$ref": "#/$defs/diagnostic" } },
+        "capability_provenance": { "type": "array", "items": { "$ref": "#/$defs/provenance" } },
+        "coverage": { "type": "array", "items": { "$ref": "#/$defs/coverage" } }
+      },
+      "required": ["subjects", "facts", "scopes", "relations", "associations", "proofs", "unresolved", "diagnostics", "capability_provenance", "coverage"],
+      "additionalProperties": false
+    },
+    "fingerprint": {
+      "type": "object",
+      "properties": {
+        "algorithm": { "type": "string" },
+        "components": { "type": "array", "items": { "type": "array", "prefixItems": [{ "type": "string" }, { "type": "string" }], "items": false } },
+        "value": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      },
+      "required": ["algorithm", "components", "value"], "additionalProperties": false
+    },
+    "resolution": {
+      "type": "object",
+      "properties": {
+        "endpoint_id": { "$ref": "#/$defs/id" }, "verdict": { "enum": ["GUARDED", "UNGARDED", "DECLARED_PUBLIC", "UNRESOLVED"] },
+        "proof_ids": { "$ref": "#/$defs/idArray" }, "unresolved_ids": { "$ref": "#/$defs/idArray" }, "coverage_ids": { "$ref": "#/$defs/idArray" },
+        "fingerprint": { "$ref": "#/$defs/fingerprint" }, "proof_fingerprints": { "type": "array", "items": { "$ref": "#/$defs/fingerprint" } }
+      },
+      "required": ["endpoint_id", "verdict", "proof_ids", "unresolved_ids", "coverage_ids", "fingerprint", "proof_fingerprints"], "additionalProperties": false
+    }
+  }
+}

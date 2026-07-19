@@ -164,3 +164,36 @@ def test_coverage_is_not_an_endpoint():
 
     assert [item.endpoint_id for item in resolutions] == ["fact:route"]
     assert all(not item.endpoint_id.startswith("coverage:") for item in resolutions)
+
+
+def test_valid_auth_ambiguity_resolves_unresolved_without_proof():
+    graph = _graph(FactKind.AUTH_AMBIGUITY)
+    graph = replace(
+        graph,
+        unresolved=(
+            UnresolvedRecord(
+                "unresolved:ambiguity",
+                "auth evidence cannot be proven",
+                "fact:route",
+                SPAN,
+                ("association:evidence", "fact:evidence"),
+            ),
+        ),
+    )
+
+    resolution = resolve_endpoints(graph)[0]
+
+    assert resolution.verdict is EndpointVerdict.UNRESOLVED
+    assert resolution.proof_ids == ()
+    assert resolution.unresolved_ids == ("unresolved:ambiguity",)
+
+
+@pytest.mark.parametrize(
+    "weak_kind",
+    (FactKind.IDENTITY_USE, FactKind.SESSION_PRESENCE, FactKind.WEAK_INDICATOR),
+)
+def test_weak_auth_facts_cannot_change_complete_endpoint_verdict(weak_kind):
+    resolution = resolve_endpoints(_graph(weak_kind))[0]
+
+    assert resolution.verdict is EndpointVerdict.UNGUARDED
+    assert resolution.proof_ids == ()

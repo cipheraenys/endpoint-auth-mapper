@@ -106,6 +106,60 @@ class EvidenceGraph:
         for owner_id, references in derivations.items():
             self._require_many(references, set(by_id), owner_id, "derivation")
         self._reject_derivation_cycles(derivations)
+        self._validate_auth_ambiguity()
+
+    def _validate_auth_ambiguity(self) -> None:
+        ambiguity_fact_ids = {
+            fact.id for fact in self.facts if fact.kind is FactKind.AUTH_AMBIGUITY
+        }
+        ambiguity_associations = {
+            association.id: association
+            for association in self.associations
+            if association.evidence_fact_id in ambiguity_fact_ids
+        }
+        ambiguity_unresolved = tuple(
+            unresolved
+            for unresolved in self.unresolved
+            if ambiguity_fact_ids & set(unresolved.derived_from)
+            or set(ambiguity_associations) & set(unresolved.derived_from)
+        )
+
+        for unresolved in ambiguity_unresolved:
+            fact_ids = ambiguity_fact_ids & set(unresolved.derived_from)
+            association_ids = set(ambiguity_associations) & set(unresolved.derived_from)
+            if not association_ids:
+                raise GraphValidationError(f"{unresolved.id}: ambiguity unresolved needs matching association")
+            if not fact_ids:
+                raise GraphValidationError(f"{unresolved.id}: ambiguity unresolved needs matching fact")
+            if not any(
+                ambiguity_associations[association_id].evidence_fact_id in fact_ids
+                for association_id in association_ids
+            ):
+                raise GraphValidationError(f"{unresolved.id}: ambiguity unresolved fact must match association")
+            if not any(
+                ambiguity_associations[association_id].endpoint_id == unresolved.subject_id
+                for association_id in association_ids
+            ):
+                raise GraphValidationError(
+                    f"{unresolved.id}: ambiguity unresolved must reference association endpoint"
+                )
+
+        for association in ambiguity_associations.values():
+            if not {association.endpoint_id, association.evidence_fact_id} <= set(association.derived_from):
+                raise GraphValidationError(
+                    f"{association.id}: ambiguity association derivation must include endpoint and fact"
+                )
+            matching = tuple(
+                unresolved
+                for unresolved in ambiguity_unresolved
+                if association.id in unresolved.derived_from
+                and association.evidence_fact_id in unresolved.derived_from
+                and unresolved.subject_id == association.endpoint_id
+            )
+            if not matching:
+                raise GraphValidationError(
+                    f"{association.id}: ambiguity association needs endpoint-bound unresolved evidence"
+                )
 
     @staticmethod
     def _require(reference: str, allowed: set[str], owner: str, label: str) -> None:

@@ -62,7 +62,7 @@ def test_explicit_json_scan_runs_adapter_to_v2_report(tmp_path: Path, capsys):
 
     document = json.loads(capsys.readouterr().out)
     assert code == 0
-    assert document["schema_version"] == "2.0"
+    assert document["schema_version"] == "2.1"
     assert document["endpoint_resolutions"][0]["verdict"] == "GUARDED"
     assert document["graph"]["proofs"][0]["derived_from"]
 

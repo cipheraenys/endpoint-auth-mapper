@@ -22,6 +22,7 @@ class FactKind(str, Enum):
     ENDPOINT_DECLARATION = "endpoint_declaration"
     ROUTE_IDENTITY = "route_identity"
     AUTH_ENFORCEMENT = "auth_enforcement"
+    AUTH_AMBIGUITY = "auth_ambiguity"
     PUBLIC_DECLARATION = "public_declaration"
     IDENTITY_USE = "identity_use"
     SESSION_PRESENCE = "session_presence"
