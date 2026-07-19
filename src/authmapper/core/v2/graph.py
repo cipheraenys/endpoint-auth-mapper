@@ -131,15 +131,15 @@ class EvidenceGraph:
                 raise GraphValidationError(f"{unresolved.id}: ambiguity unresolved needs matching association")
             if not fact_ids:
                 raise GraphValidationError(f"{unresolved.id}: ambiguity unresolved needs matching fact")
-            if not any(
-                ambiguity_associations[association_id].evidence_fact_id in fact_ids
+            matched_association_ids = {
+                association_id
                 for association_id in association_ids
-            ):
+                if ambiguity_associations[association_id].evidence_fact_id in fact_ids
+            }
+            if len(fact_ids) != 1 or len(association_ids) != 1 or len(matched_association_ids) != 1:
                 raise GraphValidationError(f"{unresolved.id}: ambiguity unresolved fact must match association")
-            if not any(
-                ambiguity_associations[association_id].endpoint_id == unresolved.subject_id
-                for association_id in association_ids
-            ):
+            association_id = next(iter(matched_association_ids))
+            if ambiguity_associations[association_id].endpoint_id != unresolved.subject_id:
                 raise GraphValidationError(
                     f"{unresolved.id}: ambiguity unresolved must reference association endpoint"
                 )
