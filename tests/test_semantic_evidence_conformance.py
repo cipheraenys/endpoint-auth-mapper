@@ -126,9 +126,9 @@ def _semantic_graph() -> EvidenceGraph:
                 for evidence, endpoint in (
                     ("ambiguity", "ambiguous"),
                     ("enforcement", "guarded"),
-                    ("identity", "identity"),
-                    ("session", "session"),
-                    ("weak", "weak"),
+                    ("identity", "ambiguous"),
+                    ("session", "ambiguous"),
+                    ("weak", "ambiguous"),
                 )
             )
         ),
