@@ -102,6 +102,7 @@ class Subject:
     span: SourceSpan
     name: str | None = None
     parent_id: str | None = None
+    derived_from: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

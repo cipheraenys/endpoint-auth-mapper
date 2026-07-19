@@ -65,6 +65,7 @@ class EvidenceGraph:
         association_ids = {item.id for item in self.associations}
         provenance_by_id = {item.id: item for item in self.capability_provenance}
         provenance_ids = set(provenance_by_id)
+        enforcement_path_node_ids: dict[str, set[str]] = {}
 
         for subject in self.subjects:
             self._require_optional(subject.parent_id, subject_ids, subject.id, "parent subject")
@@ -123,13 +124,15 @@ class EvidenceGraph:
                         raise GraphValidationError(
                             f"{proof.id}: enforcement proof relations must be in association provenance"
                         )
-                    self._validate_enforcement_association(
-                        association,
-                        facts_by_id,
-                        scopes_by_id,
-                        relations_by_id,
-                        selected_relation_ids=proof.relation_ids,
-                        relation_path_label="selected relation path",
+                    enforcement_path_node_ids.setdefault(proof.id, set()).update(
+                        self._validate_enforcement_association(
+                            association,
+                            facts_by_id,
+                            scopes_by_id,
+                            relations_by_id,
+                            selected_relation_ids=proof.relation_ids,
+                            relation_path_label="selected relation path",
+                        )
                     )
 
         ambiguity_associations = {
@@ -160,7 +163,11 @@ class EvidenceGraph:
         for owner_id, references in derivations.items():
             self._require_many(references, set(by_id), owner_id, "derivation")
         self._reject_derivation_cycles(derivations)
-        self._reject_advisory_enforcement_derivations(facts_by_id, derivations)
+        self._reject_advisory_enforcement_derivations(
+            facts_by_id,
+            derivations,
+            enforcement_path_node_ids,
+        )
         self._validate_auth_ambiguity()
 
     def _validate_enforcement_association(
@@ -172,7 +179,7 @@ class EvidenceGraph:
         *,
         selected_relation_ids: tuple[str, ...] | None = None,
         relation_path_label: str = "relation path",
-    ) -> None:
+    ) -> set[str]:
         endpoint = facts_by_id[association.endpoint_id]
         evidence = facts_by_id[association.evidence_fact_id]
         scope = scopes_by_id[association.scope_id]
@@ -199,28 +206,43 @@ class EvidenceGraph:
         direct_route_scope = (
             scope.kind is ScopeKind.ROUTE and scope.subject_id == endpoint.subject_id
         )
-        if not direct_route_scope and not _relation_path_connects(
-            endpoint_ids,
-            scope_ids,
-            selected_relation_ids,
-            relations_by_id,
-            structural_node_ids,
-            {endpoint.id},
-        ):
-            raise GraphValidationError(f"{association.id}: scope must belong to endpoint or have relation path")
+        scope_path_nodes: set[str] = set()
+        if not direct_route_scope:
+            scope_path = _relation_path_nodes(
+                endpoint_ids,
+                scope_ids,
+                selected_relation_ids,
+                relations_by_id,
+                structural_node_ids,
+                {endpoint.id},
+            )
+            if scope_path is None:
+                raise GraphValidationError(
+                    f"{association.id}: scope must belong to endpoint or have relation path"
+                )
+            scope_path_nodes.update(scope_path)
 
         endpoint_region = endpoint_ids | _scope_region(scope, scopes_by_id)
-        if not _relation_path_connects(
+        evidence_path = _relation_path_nodes(
             endpoint_region,
             {evidence.subject_id},
             selected_relation_ids,
             relations_by_id,
             structural_node_ids,
             {endpoint.id},
-        ):
+        )
+        if evidence_path is None:
             raise GraphValidationError(
                 f"{association.id}: {relation_path_label} must connect endpoint scope to evidence"
             )
+        return {
+            association.scope_id,
+            endpoint.subject_id,
+            evidence.subject_id,
+            scope.subject_id,
+            *scope_path_nodes,
+            *evidence_path,
+        }
 
     def _validate_auth_ambiguity(self) -> None:
         ambiguity_fact_ids = {
@@ -330,6 +352,7 @@ class EvidenceGraph:
         self,
         facts_by_id: dict[str, Fact],
         derivations: dict[str, tuple[str, ...]],
+        enforcement_path_node_ids: dict[str, set[str]],
     ) -> None:
         advisory_kinds = {
             FactKind.AUTH_AMBIGUITY,
@@ -339,25 +362,23 @@ class EvidenceGraph:
         }
 
         def includes_advisory(identifier: str) -> bool:
-            for dependency in derivations.get(identifier, ()):
-                fact = facts_by_id.get(dependency)
-                if fact is not None and fact.kind in advisory_kinds:
-                    return True
-                if includes_advisory(dependency):
-                    return True
-            return False
+            fact = facts_by_id.get(identifier)
+            if fact is not None and fact.kind in advisory_kinds:
+                return True
+            return any(
+                includes_advisory(dependency)
+                for dependency in derivations.get(identifier, ())
+            )
 
         for proof in self.proofs:
             if proof.kind is not ProofKind.AUTH_ENFORCEMENT:
                 continue
             selected_ids = (
-                *(
-                    fact_id
-                    for fact_id in proof.fact_ids
-                    if facts_by_id[fact_id].kind is FactKind.AUTH_ENFORCEMENT
-                ),
+                proof.endpoint_id,
+                *proof.fact_ids,
                 *proof.association_ids,
                 *proof.relation_ids,
+                *enforcement_path_node_ids[proof.id],
                 proof.id,
             )
             if any(includes_advisory(identifier) for identifier in selected_ids):
@@ -380,14 +401,14 @@ def _scope_region(scope: Scope, scopes_by_id: dict[str, Scope]) -> set[str]:
     return region
 
 
-def _relation_path_connects(
+def _relation_path_nodes(
     start_ids: set[str],
     target_ids: set[str],
     relation_ids: tuple[str, ...],
     relations_by_id: dict[str, Relation],
     allowed_node_ids: set[str],
     start_only_node_ids: set[str],
-) -> bool:
+) -> set[str] | None:
     adjacent: dict[str, set[str]] = {}
     for relation_id in relation_ids:
         relation = relations_by_id[relation_id]
@@ -397,7 +418,7 @@ def _relation_path_connects(
             or relation.target_id not in allowed_node_ids
             or relation.target_id in start_only_node_ids
         ):
-            return False
+            return None
         step = _forward_relation_step(relation)
         if step is None:
             continue
@@ -405,16 +426,18 @@ def _relation_path_connects(
         adjacent.setdefault(source_id, set()).add(target_id)
 
     seen = set(start_ids)
-    pending = list(start_ids)
+    pending: list[tuple[str, tuple[str, ...]]] = [
+        (identifier, (identifier,)) for identifier in sorted(start_ids)
+    ]
     while pending:
-        current = pending.pop()
-        for neighbor in adjacent.get(current, ()):
+        current, path = pending.pop(0)
+        for neighbor in sorted(adjacent.get(current, ())):
             if neighbor in target_ids:
-                return True
+                return {*path, neighbor}
             if neighbor not in seen:
                 seen.add(neighbor)
-                pending.append(neighbor)
-    return False
+                pending.append((neighbor, (*path, neighbor)))
+    return None
 
 
 def _forward_relation_step(relation: Relation) -> tuple[str, str] | None:

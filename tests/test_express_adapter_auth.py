@@ -50,6 +50,8 @@ def test_exact_passport_import_and_route_middleware_proves_guard(tmp_path: Path)
         endpoint.subject_id,
         evidence.subject_id,
     )
+    assert all(not item.derived_from for item in graph.subjects)
+    assert all(not item.derived_from for item in graph.scopes)
 
 
 def test_late_middleware_does_not_protect_earlier_route(tmp_path: Path):
@@ -160,6 +162,8 @@ def test_jwt_mount_protects_only_its_imported_router(tmp_path: Path):
         ("GET", "/api/status"),
     ]
     assert [item.verdict for item in resolutions] == [EndpointVerdict.GUARDED, EndpointVerdict.UNGUARDED]
+    assert all(not item.derived_from for item in graph.subjects)
+    assert all(not item.derived_from for item in graph.scopes)
 
 
 def test_auth_semantics_inside_handler_remain_unresolved(tmp_path: Path):

@@ -58,9 +58,10 @@
         "id": { "$ref": "#/$defs/id" },
         "kind": { "enum": ["route_call", "object_property", "handler", "callable_parameter", "type_annotation", "decorator", "middleware", "policy", "public_declaration"] },
         "span": { "$ref": "#/$defs/span" },
-        "name": { "type": ["string", "null"] }, "parent_id": { "type": ["string", "null"] }
+        "name": { "type": ["string", "null"] }, "parent_id": { "type": ["string", "null"] },
+        "derived_from": { "$ref": "#/$defs/idArray" }
       },
-      "required": ["id", "kind", "span", "name", "parent_id"], "additionalProperties": false
+      "required": ["id", "kind", "span", "name", "parent_id", "derived_from"], "additionalProperties": false
     },
     "fact": {
       "type": "object",

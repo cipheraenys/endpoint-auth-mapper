@@ -298,6 +298,177 @@ def test_unrelated_advisory_fact_does_not_taint_valid_enforcement_proof():
     assert resolve_endpoints(graph)[0].verdict is EndpointVerdict.GUARDED
 
 
+ADVISORY_FACT_KINDS = (
+    FactKind.AUTH_AMBIGUITY,
+    FactKind.IDENTITY_USE,
+    FactKind.SESSION_PRESENCE,
+    FactKind.WEAK_INDICATOR,
+)
+
+
+def _add_advisory_fact(graph: EvidenceGraph, advisory_kind: FactKind) -> EvidenceGraph:
+    advisory = Fact("fact:advisory", advisory_kind, "subject:auth", SPAN)
+    graph = replace(
+        graph,
+        facts=tuple(sorted((*graph.facts, advisory), key=lambda item: item.id)),
+    )
+    if advisory_kind is not FactKind.AUTH_AMBIGUITY:
+        return graph
+
+    association = EvidenceAssociation(
+        "association:ambiguity",
+        "fact:route",
+        advisory.id,
+        "scope:route",
+        SPAN,
+        (advisory.id, "fact:route"),
+    )
+    unresolved = UnresolvedRecord(
+        "unresolved:ambiguity",
+        "auth evidence cannot be proven",
+        "fact:route",
+        SPAN,
+        (association.id, advisory.id),
+    )
+    return replace(
+        graph,
+        associations=tuple(sorted((*graph.associations, association), key=lambda item: item.id)),
+        unresolved=(unresolved,),
+    )
+
+
+def _structural_bridge_graph(advisory_kind: FactKind, bridge_id: str) -> EvidenceGraph:
+    graph = _add_advisory_fact(_guard_graph(), advisory_kind)
+    relations = tuple(
+        sorted(
+            (
+                Relation("relation:bridge:route", RelationKind.REFERENCES, "subject:route", bridge_id, SPAN),
+                Relation("relation:bridge:auth", RelationKind.REFERENCES, bridge_id, "subject:auth", SPAN),
+            ),
+            key=lambda item: item.id,
+        )
+    )
+    enforcement_association = replace(
+        next(item for item in graph.associations if item.id == "association:auth"),
+        scope_id=bridge_id if bridge_id.startswith("scope:") else "scope:route",
+        derived_from=("fact:auth", "fact:route", "relation:bridge:auth", "relation:bridge:route"),
+    )
+    proof = replace(
+        graph.proofs[0],
+        relation_ids=("relation:bridge:auth", "relation:bridge:route"),
+        derived_from=(
+            "association:auth",
+            "fact:auth",
+            "fact:route",
+            "relation:bridge:auth",
+            "relation:bridge:route",
+        ),
+    )
+    associations = tuple(
+        sorted(
+            (
+                enforcement_association,
+                *(item for item in graph.associations if item.id != "association:auth"),
+            ),
+            key=lambda item: item.id,
+        )
+    )
+    if bridge_id.startswith("subject:"):
+        subjects = tuple(
+            sorted(
+                (
+                    *graph.subjects,
+                    Subject(
+                        bridge_id,
+                        SubjectKind.HANDLER,
+                        SPAN,
+                        derived_from=("fact:advisory",),
+                    ),
+                ),
+                key=lambda item: item.id,
+            )
+        )
+        scopes = graph.scopes
+    else:
+        subjects = graph.subjects
+        scopes = tuple(
+            sorted(
+                (
+                    *graph.scopes,
+                    Scope(
+                        bridge_id,
+                        ScopeKind.HANDLER,
+                        "subject:route",
+                        SPAN,
+                        derived_from=("fact:advisory",),
+                    ),
+                ),
+                key=lambda item: item.id,
+            )
+        )
+    return replace(
+        graph,
+        subjects=subjects,
+        scopes=scopes,
+        relations=relations,
+        associations=associations,
+        proofs=(proof,),
+    )
+
+
+@pytest.mark.parametrize("advisory_kind", ADVISORY_FACT_KINDS)
+def test_graph_rejects_advisory_derived_intermediate_scope_on_enforcement_path(
+    advisory_kind: FactKind,
+):
+    graph = _structural_bridge_graph(advisory_kind, "scope:bridge")
+
+    with pytest.raises(GraphValidationError, match="auth enforcement derivation includes advisory fact"):
+        graph.validate()
+
+
+@pytest.mark.parametrize("advisory_kind", ADVISORY_FACT_KINDS)
+def test_graph_rejects_advisory_derived_intermediate_subject_on_enforcement_path(
+    advisory_kind: FactKind,
+):
+    graph = _structural_bridge_graph(advisory_kind, "subject:bridge")
+
+    with pytest.raises(GraphValidationError, match="auth enforcement derivation includes advisory fact"):
+        graph.validate()
+
+
+@pytest.mark.parametrize("advisory_kind", ADVISORY_FACT_KINDS)
+def test_unrelated_advisory_derived_subject_and_scope_do_not_taint_enforcement_path(
+    advisory_kind: FactKind,
+):
+    graph = _add_advisory_fact(_guard_graph(), advisory_kind)
+    unrelated_subject = Subject(
+        "subject:unrelated",
+        SubjectKind.HANDLER,
+        SPAN,
+        derived_from=("fact:advisory",),
+    )
+    unrelated_scope = Scope(
+        "scope:unrelated",
+        ScopeKind.HANDLER,
+        unrelated_subject.id,
+        SPAN,
+        derived_from=("fact:advisory",),
+    )
+    graph = replace(
+        graph,
+        subjects=tuple(sorted((*graph.subjects, unrelated_subject), key=lambda item: item.id)),
+        scopes=tuple(sorted((*graph.scopes, unrelated_scope), key=lambda item: item.id)),
+    )
+
+    graph.validate()
+    expected = (
+        EndpointVerdict.UNRESOLVED
+        if advisory_kind is FactKind.AUTH_AMBIGUITY
+        else EndpointVerdict.GUARDED
+    )
+    assert resolve_endpoints(graph)[0].verdict is expected
+
+
 def _fact_bridge_graph(bridge_kind: FactKind, bridge_subject_id: str = "subject:route") -> EvidenceGraph:
     graph = _guard_graph()
     bridge = Fact("fact:bridge", bridge_kind, bridge_subject_id, SPAN)
