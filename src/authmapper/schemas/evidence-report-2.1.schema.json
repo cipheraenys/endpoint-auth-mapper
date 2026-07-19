@@ -55,7 +55,9 @@
     "subject": {
       "type": "object",
       "properties": {
-        "id": { "$ref": "#/$defs/id" }, "kind": { "type": "string" }, "span": { "$ref": "#/$defs/span" },
+        "id": { "$ref": "#/$defs/id" },
+        "kind": { "enum": ["route_call", "object_property", "handler", "callable_parameter", "type_annotation", "decorator", "middleware", "policy", "public_declaration"] },
+        "span": { "$ref": "#/$defs/span" },
         "name": { "type": ["string", "null"] }, "parent_id": { "type": ["string", "null"] }
       },
       "required": ["id", "kind", "span", "name", "parent_id"], "additionalProperties": false
@@ -79,7 +81,7 @@
     "scope": {
       "type": "object",
       "properties": {
-        "id": { "$ref": "#/$defs/id" }, "kind": { "type": "string" }, "subject_id": { "$ref": "#/$defs/id" },
+        "id": { "$ref": "#/$defs/id" }, "kind": { "enum": ["application", "component", "route", "handler", "callable"] }, "subject_id": { "$ref": "#/$defs/id" },
         "span": { "$ref": "#/$defs/span" }, "parent_id": { "type": ["string", "null"] }, "derived_from": { "$ref": "#/$defs/idArray" }
       },
       "required": ["id", "kind", "subject_id", "span", "parent_id", "derived_from"], "additionalProperties": false
@@ -87,7 +89,7 @@
     "relation": {
       "type": "object",
       "properties": {
-        "id": { "$ref": "#/$defs/id" }, "kind": { "type": "string" }, "source_id": { "$ref": "#/$defs/id" },
+        "id": { "$ref": "#/$defs/id" }, "kind": { "enum": ["contains", "composes", "references", "derives"] }, "source_id": { "$ref": "#/$defs/id" },
         "target_id": { "$ref": "#/$defs/id" }, "span": { "$ref": "#/$defs/span" },
         "derived_from": { "$ref": "#/$defs/idArray" }, "order": { "type": ["integer", "null"] }
       },
@@ -104,7 +106,7 @@
     "proof": {
       "type": "object",
       "properties": {
-        "id": { "$ref": "#/$defs/id" }, "kind": { "type": "string" }, "endpoint_id": { "$ref": "#/$defs/id" },
+        "id": { "$ref": "#/$defs/id" }, "kind": { "enum": ["auth_enforcement", "public_policy"] }, "endpoint_id": { "$ref": "#/$defs/id" },
         "fact_ids": { "$ref": "#/$defs/idArray" }, "association_ids": { "$ref": "#/$defs/idArray" },
         "relation_ids": { "$ref": "#/$defs/idArray" }, "derived_from": { "$ref": "#/$defs/idArray" }
       },
@@ -130,7 +132,7 @@
     "provenance": {
       "type": "object",
       "properties": {
-        "id": { "$ref": "#/$defs/id" }, "capability": { "type": "string" }, "adapter_id": { "type": "string" },
+        "id": { "$ref": "#/$defs/id" }, "capability": { "enum": ["endpoint_discovery", "route_composition", "scope_resolution", "auth_association"] }, "adapter_id": { "type": "string" },
         "adapter_version": { "type": "string" }, "rule_ids": { "$ref": "#/$defs/idArray" }
       },
       "required": ["id", "capability", "adapter_id", "adapter_version", "rule_ids"], "additionalProperties": false
@@ -138,7 +140,7 @@
     "coverage": {
       "type": "object",
       "properties": {
-        "id": { "$ref": "#/$defs/id" }, "target_id": { "$ref": "#/$defs/id" }, "capability": { "type": "string" },
+        "id": { "$ref": "#/$defs/id" }, "target_id": { "$ref": "#/$defs/id" }, "capability": { "enum": ["endpoint_discovery", "route_composition", "scope_resolution", "auth_association"] },
         "status": { "enum": ["analyzed", "excluded", "unsupported", "skipped", "error"] }, "provenance_id": { "$ref": "#/$defs/id" },
         "reason": { "type": ["string", "null"] }
       },

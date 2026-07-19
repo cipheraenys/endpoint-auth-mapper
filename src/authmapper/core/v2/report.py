@@ -51,7 +51,7 @@ class EvidenceReport:
 def report_document(
     report: EvidenceReport,
     *,
-    schema_version: str,
+    schema_version: str = REPORT_SCHEMA_VERSION,
 ) -> dict[str, Any]:
     if schema_version != REPORT_SCHEMA_VERSION:
         raise ValueError(f"unsupported report schema version: {schema_version}")

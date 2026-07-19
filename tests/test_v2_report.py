@@ -19,6 +19,7 @@ from authmapper.core.v2 import (
     CoverageStatus,
     Diagnostic,
     DiagnosticLevel,
+    EndpointVerdict,
     EvidenceAssociation,
     EvidenceGraph,
     EvidenceReport,
@@ -27,6 +28,8 @@ from authmapper.core.v2 import (
     InvocationProvenance,
     Proof,
     ProofKind,
+    Relation,
+    RelationKind,
     Scope,
     ScopeKind,
     SourceSpan,
@@ -39,6 +42,19 @@ from authmapper.core.v2 import (
     resolve_endpoints,
 )
 from authmapper.reporters.v2_json_reporter import render_evidence_json
+
+REPORT_ENUM_FIELDS = (
+    ("subject", "kind", SubjectKind),
+    ("fact", "kind", FactKind),
+    ("scope", "kind", ScopeKind),
+    ("relation", "kind", RelationKind),
+    ("proof", "kind", ProofKind),
+    ("diagnostic", "level", DiagnosticLevel),
+    ("provenance", "capability", Capability),
+    ("coverage", "capability", Capability),
+    ("coverage", "status", CoverageStatus),
+    ("resolution", "verdict", EndpointVerdict),
+)
 
 
 def evidence_report() -> EvidenceReport:
@@ -78,7 +94,14 @@ def evidence_report() -> EvidenceReport:
         "fact:auth",
         "scope:guarded",
         guarded_span,
-        ("fact:auth", "fact:guarded"),
+        ("fact:auth", "fact:guarded", "relation:auth"),
+    )
+    relation = Relation(
+        "relation:auth",
+        RelationKind.REFERENCES,
+        "subject:guarded",
+        "subject:auth",
+        guarded_span,
     )
     proof = Proof(
         "proof:guarded",
@@ -86,7 +109,8 @@ def evidence_report() -> EvidenceReport:
         "fact:guarded",
         ("fact:auth",),
         ("association:auth",),
-        derived_from=("association:auth", "fact:auth"),
+        ("relation:auth",),
+        ("association:auth", "fact:auth", "fact:guarded", "relation:auth"),
     )
     provenance = tuple(
         sorted(
@@ -122,6 +146,7 @@ def evidence_report() -> EvidenceReport:
         subjects=subjects,
         facts=facts,
         scopes=scopes,
+        relations=(relation,),
         associations=(association,),
         proofs=(proof,),
         unresolved=(
@@ -195,17 +220,66 @@ def test_report_document_explicitly_selects_current_2_1_contract():
     assert document["fact_graph_version"] == "2.1"
 
 
+def test_report_document_defaults_to_current_2_1_contract():
+    document = report_document(evidence_report())
+
+    assert document["$schema"] == REPORT_SCHEMA_ID
+    assert document["schema_version"] == REPORT_SCHEMA_VERSION == "2.1"
+
+
 def test_report_document_rejects_unknown_contract_version():
     with pytest.raises(ValueError, match="unsupported report schema version"):
         report_document(evidence_report(), schema_version="2.0")
 
 
-def test_report_2_1_schema_accepts_every_fact_kind():
+@pytest.mark.parametrize(
+    ("definition", "property_name", "enum_type"),
+    REPORT_ENUM_FIELDS,
+)
+def test_report_2_1_schema_accepts_every_public_graph_enum(definition, property_name, enum_type):
     schema = json.loads(files("authmapper.schemas").joinpath("evidence-report-2.1.schema.json").read_text())
 
-    assert set(schema["$defs"]["fact"]["properties"]["kind"]["enum"]) == {
-        item.value for item in FactKind
+    assert set(schema["$defs"][definition]["properties"][property_name]["enum"]) == {
+        item.value for item in enum_type
     }
+
+
+@pytest.mark.parametrize(
+    ("definition", "property_name"),
+    tuple((definition, property_name) for definition, property_name, _ in REPORT_ENUM_FIELDS),
+)
+def test_report_2_1_schema_rejects_unknown_public_graph_enum(definition, property_name):
+    schema = json.loads(files("authmapper.schemas").joinpath("evidence-report-2.1.schema.json").read_text())
+    document = report_document(evidence_report())
+    locations = {
+        "subject": document["graph"]["subjects"],
+        "fact": document["graph"]["facts"],
+        "scope": document["graph"]["scopes"],
+        "relation": document["graph"]["relations"],
+        "proof": document["graph"]["proofs"],
+        "diagnostic": document["graph"]["diagnostics"],
+        "provenance": document["graph"]["capability_provenance"],
+        "coverage": document["graph"]["coverage"],
+        "resolution": document["endpoint_resolutions"],
+    }
+    locations[definition][0][property_name] = "unknown"
+
+    errors = tuple(Draft202012Validator(schema).iter_errors(document))
+
+    assert any(error.validator == "enum" for error in errors)
+
+
+def test_report_2_1_schema_has_completeness_tests_for_every_enum():
+    schema = json.loads(files("authmapper.schemas").joinpath("evidence-report-2.1.schema.json").read_text())
+    actual = {
+        (definition, property_name)
+        for definition, definition_schema in schema["$defs"].items()
+        for property_name, property_schema in definition_schema.get("properties", {}).items()
+        if "enum" in property_schema
+    }
+    expected = {(definition, property_name) for definition, property_name, _ in REPORT_ENUM_FIELDS}
+
+    assert actual == expected
 
 
 def test_fingerprints_are_algorithm_versioned_and_semantic():

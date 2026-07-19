@@ -9,10 +9,11 @@ confidence do not change resolver behavior.
 `GUARDED` requires all of these records:
 
 - A sourced `AUTH_ENFORCEMENT` fact with a source span.
-- An `EvidenceAssociation` that binds the enforcement fact to an endpoint and
-  scope and retains derivation.
+- An `EvidenceAssociation` that binds the enforcement fact to an endpoint's
+  route scope, or to another scope through an explicit relation path, and
+  retains a relation path from endpoint scope to evidence.
 - An `AUTH_ENFORCEMENT` proof that references the fact and matching endpoint
-  association and retains derivation.
+  association and retains the full selected derivation.
 - Analyzed endpoint discovery, route composition, scope resolution, and auth
   association coverage for the endpoint.
 - No endpoint-bound unresolved evidence or invalid proof.
@@ -53,11 +54,11 @@ evidence.
 
 ## Report Version
 
-Current semantic graph and report contract is `2.1`, identified by
-`https://authmap.dev/schemas/evidence-report-2.1.json`. Callers select `2.1`
-explicitly when building a report document. Schema `2.0` remains bundled and
-byte-identical for existing documents. Current serializer does not emit `2.0`
-documents or ambiguity evidence under a `2.0` envelope.
+Current semantic graph and report contracts are `2.1`, identified by
+`https://authmap.dev/schemas/evidence-report-2.1.json`. Report documents default
+to `2.1`; callers may also select it explicitly. Schema `2.0` remains bundled
+and byte-identical for existing documents. Current serializer does not emit
+`2.0` documents or ambiguity evidence under a `2.0` envelope.
 
 ## Legacy Boundary
 
