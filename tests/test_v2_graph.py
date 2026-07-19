@@ -62,8 +62,128 @@ def _valid_graph() -> EvidenceGraph:
     )
 
 
+def _guard_graph(
+    *,
+    enforcement_derived_from: tuple[str, ...] = (),
+    additional_facts: tuple[Fact, ...] = (),
+) -> EvidenceGraph:
+    graph = _valid_graph()
+    enforcement = Fact(
+        "fact:auth",
+        FactKind.AUTH_ENFORCEMENT,
+        "subject:auth",
+        SPAN,
+        derived_from=enforcement_derived_from,
+    )
+    proof = Proof(
+        "proof:auth",
+        ProofKind.AUTH_ENFORCEMENT,
+        "fact:route",
+        (enforcement.id,),
+        ("association:auth",),
+        ("relation:auth",),
+        ("association:auth", enforcement.id, "fact:route", "relation:auth"),
+    )
+    return EvidenceGraph(
+        subjects=graph.subjects,
+        facts=tuple(sorted((*additional_facts, enforcement, graph.facts[1]), key=lambda item: item.id)),
+        scopes=graph.scopes,
+        relations=graph.relations,
+        associations=graph.associations,
+        proofs=(proof,),
+    )
+
+
 def test_valid_graph_accepts_sorted_referenced_evidence():
     _valid_graph().validate()
+
+
+def test_graph_accepts_sourced_enforcement_without_fact_derivation():
+    _guard_graph().validate()
+
+
+def test_graph_accepts_enforcement_derived_from_enforcement_and_route_provenance():
+    source_enforcement = Fact(
+        "fact:auth:source",
+        FactKind.AUTH_ENFORCEMENT,
+        "subject:auth",
+        SPAN,
+        derived_from=("fact:route",),
+    )
+    graph = _guard_graph(
+        enforcement_derived_from=(source_enforcement.id,),
+        additional_facts=(source_enforcement,),
+    )
+
+    graph.validate()
+
+
+def test_graph_rejects_enforcement_directly_derived_from_weak_indicator():
+    weak = Fact("fact:advisory", FactKind.WEAK_INDICATOR, "subject:auth", SPAN)
+    graph = _guard_graph(enforcement_derived_from=(weak.id,), additional_facts=(weak,))
+
+    with pytest.raises(GraphValidationError, match="auth enforcement derivation includes advisory fact"):
+        graph.validate()
+
+
+def test_graph_rejects_enforcement_directly_derived_from_auth_ambiguity():
+    ambiguity = Fact("fact:advisory", FactKind.AUTH_AMBIGUITY, "subject:auth", SPAN)
+    graph = _guard_graph(enforcement_derived_from=(ambiguity.id,), additional_facts=(ambiguity,))
+    ambiguity_association = EvidenceAssociation(
+        "association:ambiguity",
+        "fact:route",
+        ambiguity.id,
+        "scope:route",
+        SPAN,
+        (ambiguity.id, "fact:route"),
+    )
+    graph = EvidenceGraph(
+        subjects=graph.subjects,
+        facts=graph.facts,
+        scopes=graph.scopes,
+        relations=graph.relations,
+        associations=(ambiguity_association, *graph.associations),
+        proofs=graph.proofs,
+        unresolved=(
+            UnresolvedRecord(
+                "unresolved:ambiguity",
+                "auth evidence cannot be proven",
+                "fact:route",
+                SPAN,
+                (ambiguity_association.id, ambiguity.id),
+            ),
+        ),
+    )
+
+    with pytest.raises(GraphValidationError, match="auth enforcement derivation includes advisory fact"):
+        graph.validate()
+
+
+@pytest.mark.parametrize("kind", [FactKind.IDENTITY_USE, FactKind.SESSION_PRESENCE])
+def test_graph_rejects_enforcement_directly_derived_from_identity_or_session(kind: FactKind):
+    advisory = Fact("fact:advisory", kind, "subject:auth", SPAN)
+    graph = _guard_graph(enforcement_derived_from=(advisory.id,), additional_facts=(advisory,))
+
+    with pytest.raises(GraphValidationError, match="auth enforcement derivation includes advisory fact"):
+        graph.validate()
+
+
+def test_graph_rejects_transitively_advisory_enforcement_derivation():
+    weak = Fact("fact:advisory", FactKind.WEAK_INDICATOR, "subject:auth", SPAN)
+    derived_enforcement = Fact(
+        "fact:auth:derived",
+        FactKind.AUTH_ENFORCEMENT,
+        "subject:auth",
+        SPAN,
+        derived_from=(weak.id,),
+    )
+    graph = _guard_graph(
+        enforcement_derived_from=(derived_enforcement.id,),
+        additional_facts=(weak, derived_enforcement),
+    )
+
+    with pytest.raises(GraphValidationError, match="auth enforcement derivation includes advisory fact"):
+        graph.validate()
 
 
 def test_graph_rejects_proof_association_with_wrong_route_scope():

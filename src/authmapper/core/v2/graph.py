@@ -160,6 +160,7 @@ class EvidenceGraph:
         for owner_id, references in derivations.items():
             self._require_many(references, set(by_id), owner_id, "derivation")
         self._reject_derivation_cycles(derivations)
+        self._reject_advisory_enforcement_derivations(facts_by_id, derivations)
         self._validate_auth_ambiguity()
 
     def _validate_enforcement_association(
@@ -319,6 +320,33 @@ class EvidenceGraph:
 
         for identifier in derivations:
             visit(identifier)
+
+    @staticmethod
+    def _reject_advisory_enforcement_derivations(
+        facts_by_id: dict[str, Fact],
+        derivations: dict[str, tuple[str, ...]],
+    ) -> None:
+        advisory_kinds = {
+            FactKind.AUTH_AMBIGUITY,
+            FactKind.IDENTITY_USE,
+            FactKind.SESSION_PRESENCE,
+            FactKind.WEAK_INDICATOR,
+        }
+
+        def includes_advisory(identifier: str) -> bool:
+            for dependency in derivations.get(identifier, ()):
+                fact = facts_by_id.get(dependency)
+                if fact is not None and fact.kind in advisory_kinds:
+                    return True
+                if includes_advisory(dependency):
+                    return True
+            return False
+
+        for fact in facts_by_id.values():
+            if fact.kind is FactKind.AUTH_ENFORCEMENT and includes_advisory(fact.id):
+                raise GraphValidationError(
+                    f"{fact.id}: auth enforcement derivation includes advisory fact"
+                )
 
 
 def _scope_region(scope: Scope, scopes_by_id: dict[str, Scope]) -> set[str]:
