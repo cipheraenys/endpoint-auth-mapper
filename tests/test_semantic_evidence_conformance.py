@@ -34,6 +34,7 @@ from authmapper.core.v2 import (
     report_document,
     resolve_endpoints,
 )
+from authmapper.reporters.v2_json_reporter import render_evidence_json
 
 EVIDENCE_SPAN = SourceSpan("src/generic.routes", 2, 3, 2, 24)
 ENDPOINT_SPAN = SourceSpan("src/generic.routes", 8, 1, 8, 32)
@@ -175,13 +176,15 @@ def test_semantic_evidence_shapes_conform_through_report_schema():
         resolutions,
         InvocationProvenance(("authmap", "--evidence-scan", "synthetic"), "/project", "0.1.2"),
     )
-    first = report_document(report, schema_version=REPORT_SCHEMA_VERSION)
-    second = report_document(report, schema_version=REPORT_SCHEMA_VERSION)
+    first_json = render_evidence_json(report)
+    second_json = render_evidence_json(report)
+    first = json.loads(first_json)
     schema = json.loads(files("authmapper.schemas").joinpath("evidence-report-2.1.schema.json").read_text())
 
     Draft202012Validator.check_schema(schema)
     Draft202012Validator(schema).validate(first)
-    assert json.dumps(first, sort_keys=True) == json.dumps(second, sort_keys=True)
+    assert first_json == second_json
+    assert first == report_document(report, schema_version=REPORT_SCHEMA_VERSION)
     assert first["$schema"] == REPORT_SCHEMA_ID
     assert first["schema_version"] == "2.1"
     ambiguity_fact = next(item for item in first["graph"]["facts"] if item["id"] == "fact:ambiguity")

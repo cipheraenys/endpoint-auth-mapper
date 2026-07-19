@@ -29,7 +29,7 @@ these records:
 - A sourced `AUTH_AMBIGUITY` fact with a source span.
 - An `EvidenceAssociation` to one endpoint and scope. Its derivation includes
   the ambiguity fact and endpoint fact.
-- An endpoint-bound `UnresolvedRecord`. Its derivation includes exactly the
+- An endpoint-bound `UnresolvedRecord`. Its derivation includes the
   matching ambiguity fact and association.
 
 Graph validation rejects missing, dangling, crossed-endpoint, or malformed

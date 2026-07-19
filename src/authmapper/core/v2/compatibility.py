@@ -14,7 +14,7 @@ def legacy_compatibility_document(result: ScanResult) -> dict[str, Any]:
     return {
         "compatibility_version": LEGACY_COMPATIBILITY_VERSION,
         "source_contract": "legacy-json-1.1",
-        "target_contract": "evidence-report-2.1",
+        "target_contract": "evidence-report-2.0",
         "classification": "legacy_unverified",
         "migration": "one-way",
         "items": [
