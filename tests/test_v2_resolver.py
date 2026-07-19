@@ -190,6 +190,30 @@ def test_public_declaration_requires_resolved_policy_proof():
     assert resolve_endpoints(resolved)[0].verdict is EndpointVerdict.DECLARED_PUBLIC
 
 
+def test_relation_free_public_policy_proof_declares_endpoint_public():
+    graph = _graph(FactKind.PUBLIC_DECLARATION, ProofKind.PUBLIC_POLICY)
+    association = replace(
+        graph.associations[0],
+        derived_from=("fact:evidence", "fact:route"),
+    )
+    proof = replace(
+        graph.proofs[0],
+        relation_ids=(),
+        derived_from=("association:evidence", "fact:evidence", "fact:route"),
+    )
+    graph = replace(
+        graph,
+        relations=(),
+        associations=(association,),
+        proofs=(proof,),
+    )
+
+    resolution = resolve_endpoints(graph)[0]
+
+    assert resolution.verdict is EndpointVerdict.DECLARED_PUBLIC
+    assert resolution.proof_ids == ("proof:result",)
+
+
 def test_explicit_unresolved_evidence_overrides_positive_proof():
     graph = _graph(FactKind.AUTH_ENFORCEMENT, ProofKind.AUTH_ENFORCEMENT)
     graph = replace(

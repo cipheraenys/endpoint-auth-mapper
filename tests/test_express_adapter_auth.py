@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 from authmapper.adapters import ExpressAdapter, build_express_graph
-from authmapper.core.v2 import AdapterInput, EndpointVerdict, resolve_endpoints
+from authmapper.core.v2 import AdapterInput, EndpointVerdict, ProofKind, resolve_endpoints
 
 
 def _resolve(tmp_path: Path, source: str):
@@ -206,7 +206,7 @@ def test_optional_auth_middleware_is_unresolved_without_proof(tmp_path: Path):
 
 
 def test_versioned_public_declaration_requires_policy_owner_reason(tmp_path: Path):
-    _, resolutions = _resolve(
+    graph, resolutions = _resolve(
         tmp_path,
         'const express = require("express");\nconst app = express();\n'
         '// authmap-public-v1 policy=service-access owner=platform reason=healthcheck\n'
@@ -219,6 +219,9 @@ def test_versioned_public_declaration_requires_policy_owner_reason(tmp_path: Pat
         EndpointVerdict.DECLARED_PUBLIC,
         EndpointVerdict.UNGUARDED,
     ]
+    public_proof = next(item for item in graph.proofs if item.kind is ProofKind.PUBLIC_POLICY)
+    assert public_proof.relation_ids
+    assert set(public_proof.relation_ids) <= set(public_proof.derived_from)
 
 
 def test_custom_auth_requires_exact_source_declaration_and_local_import(tmp_path: Path):

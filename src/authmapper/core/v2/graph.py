@@ -13,6 +13,7 @@ from .model import (
     Fact,
     FactKind,
     Proof,
+    ProofKind,
     Relation,
     Scope,
     ScopeKind,
@@ -104,8 +105,10 @@ class EvidenceGraph:
                 *proof.association_ids,
                 *proof.relation_ids,
             }
-            if not proof.fact_ids or not proof.association_ids or not proof.relation_ids:
-                raise GraphValidationError(f"{proof.id}: proof needs facts, associations, and relations")
+            if not proof.fact_ids or not proof.association_ids:
+                raise GraphValidationError(f"{proof.id}: proof needs facts and associations")
+            if proof.kind is ProofKind.AUTH_ENFORCEMENT and not proof.relation_ids:
+                raise GraphValidationError(f"{proof.id}: enforcement proof needs relations")
             if not selected_path <= set(proof.derived_from):
                 raise GraphValidationError(f"{proof.id}: proof derivation must include selected evidence path")
             for association_id in proof.association_ids:
@@ -114,8 +117,19 @@ class EvidenceGraph:
                     raise GraphValidationError(f"{proof.id}: proof association must use proof endpoint")
                 if association.evidence_fact_id not in proof.fact_ids:
                     raise GraphValidationError(f"{proof.id}: proof association must use a selected fact")
-                if not set(proof.relation_ids) & set(association.derived_from):
-                    raise GraphValidationError(f"{proof.id}: proof association must retain selected relation")
+                if proof.kind is ProofKind.AUTH_ENFORCEMENT:
+                    if not set(proof.relation_ids) <= set(association.derived_from):
+                        raise GraphValidationError(
+                            f"{proof.id}: enforcement proof relations must be in association provenance"
+                        )
+                    self._validate_enforcement_association(
+                        association,
+                        facts_by_id,
+                        scopes_by_id,
+                        relations_by_id,
+                        selected_relation_ids=proof.relation_ids,
+                        relation_path_label="selected relation path",
+                    )
 
         ambiguity_associations = {
             association.evidence_fact_id
@@ -153,13 +167,17 @@ class EvidenceGraph:
         facts_by_id: dict[str, Fact],
         scopes_by_id: dict[str, Scope],
         relations_by_id: dict[str, Relation],
+        *,
+        selected_relation_ids: tuple[str, ...] | None = None,
+        relation_path_label: str = "relation path",
     ) -> None:
         endpoint = facts_by_id[association.endpoint_id]
         evidence = facts_by_id[association.evidence_fact_id]
         scope = scopes_by_id[association.scope_id]
-        selected_relation_ids = tuple(
-            item for item in association.derived_from if item in relations_by_id
-        )
+        if selected_relation_ids is None:
+            selected_relation_ids = tuple(
+                item for item in association.derived_from if item in relations_by_id
+            )
         required = {association.endpoint_id, association.evidence_fact_id}
         if not selected_relation_ids or not required <= set(association.derived_from):
             raise GraphValidationError(
@@ -194,7 +212,7 @@ class EvidenceGraph:
             relations_by_id,
         ):
             raise GraphValidationError(
-                f"{association.id}: relation path must connect endpoint scope to evidence"
+                f"{association.id}: {relation_path_label} must connect endpoint scope to evidence"
             )
 
     def _validate_auth_ambiguity(self) -> None:

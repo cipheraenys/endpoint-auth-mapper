@@ -167,6 +167,121 @@ def test_graph_rejects_proof_with_incomplete_derivation():
         ).validate()
 
 
+def test_graph_rejects_enforcement_proof_selected_unrelated_association_relation():
+    graph = _valid_graph()
+    unrelated = Subject("subject:unrelated", SubjectKind.POLICY, SPAN)
+    unrelated_relation = Relation(
+        "relation:unrelated",
+        RelationKind.REFERENCES,
+        "subject:route",
+        unrelated.id,
+        SPAN,
+    )
+    association = EvidenceAssociation(
+        "association:auth",
+        "fact:route",
+        "fact:auth",
+        "scope:route",
+        SPAN,
+        ("fact:auth", "fact:route", "relation:auth", unrelated_relation.id),
+    )
+    proof = Proof(
+        "proof:auth",
+        ProofKind.AUTH_ENFORCEMENT,
+        "fact:route",
+        ("fact:auth",),
+        (association.id,),
+        (unrelated_relation.id,),
+        (association.id, "fact:auth", "fact:route", unrelated_relation.id),
+    )
+
+    with pytest.raises(GraphValidationError, match="selected relation path must connect endpoint scope to evidence"):
+        EvidenceGraph(
+            subjects=tuple(sorted((*graph.subjects, unrelated), key=lambda item: item.id)),
+            facts=graph.facts,
+            scopes=graph.scopes,
+            relations=tuple(sorted((*graph.relations, unrelated_relation), key=lambda item: item.id)),
+            associations=(association,),
+            proofs=(proof,),
+        ).validate()
+
+
+def test_graph_accepts_enforcement_proof_selected_valid_association_relation_path():
+    graph = _valid_graph()
+    unrelated = Subject("subject:unrelated", SubjectKind.POLICY, SPAN)
+    unrelated_relation = Relation(
+        "relation:unrelated",
+        RelationKind.REFERENCES,
+        "subject:route",
+        unrelated.id,
+        SPAN,
+    )
+    association = EvidenceAssociation(
+        "association:auth",
+        "fact:route",
+        "fact:auth",
+        "scope:route",
+        SPAN,
+        ("fact:auth", "fact:route", "relation:auth", unrelated_relation.id),
+    )
+    proof = Proof(
+        "proof:auth",
+        ProofKind.AUTH_ENFORCEMENT,
+        "fact:route",
+        ("fact:auth",),
+        (association.id,),
+        ("relation:auth",),
+        (association.id, "fact:auth", "fact:route", "relation:auth"),
+    )
+
+    EvidenceGraph(
+        subjects=tuple(sorted((*graph.subjects, unrelated), key=lambda item: item.id)),
+        facts=graph.facts,
+        scopes=graph.scopes,
+        relations=tuple(sorted((*graph.relations, unrelated_relation), key=lambda item: item.id)),
+        associations=(association,),
+        proofs=(proof,),
+    ).validate()
+
+
+def test_graph_rejects_enforcement_proof_relation_outside_association_provenance():
+    graph = _valid_graph()
+    association = EvidenceAssociation(
+        "association:auth",
+        "fact:route",
+        "fact:auth",
+        "scope:route",
+        SPAN,
+        ("fact:auth", "fact:route", "relation:alternate"),
+    )
+    alternate_relation = Relation(
+        "relation:alternate",
+        RelationKind.REFERENCES,
+        "subject:route",
+        "subject:auth",
+        SPAN,
+    )
+    proof = Proof(
+        "proof:auth",
+        ProofKind.AUTH_ENFORCEMENT,
+        "fact:route",
+        ("fact:auth",),
+        (association.id,),
+        ("relation:auth",),
+        (association.id, "fact:auth", "fact:route", "relation:auth"),
+    )
+
+    with pytest.raises(GraphValidationError, match="relations must be in association provenance"):
+        EvidenceGraph(
+            subjects=graph.subjects,
+            facts=graph.facts,
+            scopes=graph.scopes,
+            relations=(alternate_relation, *graph.relations),
+            associations=(association,),
+            proofs=(proof,),
+        ).validate()
+
+
 def test_graph_rejects_duplicate_and_unstable_ids():
     graph = _valid_graph()
     duplicate = EvidenceGraph(subjects=graph.subjects, facts=(graph.facts[0], graph.facts[0]))
