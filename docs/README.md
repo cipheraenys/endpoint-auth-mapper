@@ -28,6 +28,7 @@ Organized via [Diátaxis](https://diataxis.fr/) framework. Four modes.
 - [Frontend and adapter boundary](./explanation/frontend-adapter-boundary.md)
 - [V2 rulepack manifest](./reference/v2-rulepack-manifest.md)
 - [Evidence report v2](./reference/evidence-report-v2.md)
+- [V2 semantic evidence contracts](./reference/v2-evidence-contracts.md)
 - [Adapter explanation view](./reference/adapter-explanation.md)
 - [Express evidence scan](./reference/express-evidence-scan.md)
 - [Evidence policy](./reference/evidence-policy.md)

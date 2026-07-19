@@ -1,12 +1,16 @@
 # Evidence Report V2
 
-Evidence report `2.0` is an additive contract for provenance-rich v2 analysis.
-It does not replace default legacy JSON `1.1` during M2, and no CLI schema
-selector is exposed until a production adapter can produce v2 evidence.
+Evidence report `2.1` is current contract for provenance-rich v2 analysis. It
+adds generic auth ambiguity evidence while preserving evidence report `2.0`
+unchanged. It does not replace default legacy JSON `1.1`.
 
 Normative schema:
-`https://authmap.dev/schemas/evidence-report-2.0.json`, bundled as
-`authmapper/schemas/evidence-report-2.0.schema.json`.
+`https://authmap.dev/schemas/evidence-report-2.1.json`, bundled as
+`authmapper/schemas/evidence-report-2.1.schema.json`. Existing `2.0` schema
+remains bundled as `authmapper/schemas/evidence-report-2.0.schema.json`.
+
+See [V2 Semantic Evidence Contracts](v2-evidence-contracts.md) for enforcement,
+ambiguity, weak-signal, coverage, and legacy obligations.
 
 The report contains:
 
