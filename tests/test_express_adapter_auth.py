@@ -6,7 +6,14 @@ import json
 from pathlib import Path
 
 from authmapper.adapters import ExpressAdapter, build_express_graph
-from authmapper.core.v2 import AdapterInput, EndpointVerdict, ProofKind, RelationKind, resolve_endpoints
+from authmapper.core.v2 import (
+    AdapterInput,
+    EndpointVerdict,
+    FactKind,
+    ProofKind,
+    RelationKind,
+    resolve_endpoints,
+)
 
 
 def _resolve(tmp_path: Path, source: str):
@@ -244,6 +251,31 @@ def test_versioned_public_declaration_requires_policy_owner_reason(tmp_path: Pat
     public_proof = next(item for item in graph.proofs if item.kind is ProofKind.PUBLIC_POLICY)
     assert public_proof.relation_ids
     assert set(public_proof.relation_ids) <= set(public_proof.derived_from)
+
+
+def test_auth_looking_middleware_emits_generic_ambiguity_triple(tmp_path: Path):
+    graph, resolutions = _resolve(
+        tmp_path,
+        'const express = require("express");\nconst app = express();\n'
+        'app.get("/admin", requireAuth, handler);\n',
+    )
+
+    # verdict is preserved (bare record already resolved UNRESOLVED)
+    assert [item.verdict for item in resolutions] == [EndpointVerdict.UNRESOLVED]
+
+    # exactly one generic ambiguity fact is emitted
+    ambiguity_facts = [f for f in graph.facts if f.kind is FactKind.AUTH_AMBIGUITY]
+    assert len(ambiguity_facts) == 1
+    fact = ambiguity_facts[0]
+
+    # an association binds the endpoint to the ambiguity fact
+    association = next(a for a in graph.associations if a.evidence_fact_id == fact.id)
+    endpoint = next(f for f in graph.facts if f.id == association.endpoint_id)
+    assert set(association.derived_from) == {fact.id, endpoint.id}
+
+    # the endpoint-bound unresolved record derives from association + fact
+    record = next(u for u in graph.unresolved if u.subject_id == endpoint.id)
+    assert set(record.derived_from) == {association.id, fact.id}
 
 
 def test_custom_auth_requires_exact_source_declaration_and_local_import(tmp_path: Path):

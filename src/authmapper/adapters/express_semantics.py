@@ -138,13 +138,29 @@ def build_express_graph(artifact: AdapterArtifact, *, adapter_version: str) -> E
                 associations.append(association)
                 proofs.append(proof)
             elif _auth_looking(middleware.name):
+                ambiguity_fact = Fact(
+                    f"fact:ambiguity:{endpoint.id}:{middleware.id}",
+                    FactKind.AUTH_AMBIGUITY,
+                    middleware.id,
+                    middleware.span,
+                )
+                ambiguity_association = EvidenceAssociation(
+                    f"association:ambiguity:{endpoint.id}:{middleware.id}",
+                    endpoint.id,
+                    ambiguity_fact.id,
+                    route_scope.id,
+                    middleware.span,
+                    tuple(sorted((ambiguity_fact.id, endpoint.id))),
+                )
+                facts.append(ambiguity_fact)
+                associations.append(ambiguity_association)
                 unresolved.append(
                     UnresolvedRecord(
                         f"unresolved:auth:{endpoint.id}:{middleware.id}",
                         "middleware auth semantics are not proven",
                         endpoint.id,
                         middleware.span,
-                        (middleware.id,),
+                        tuple(sorted((ambiguity_association.id, ambiguity_fact.id))),
                     )
                 )
 
