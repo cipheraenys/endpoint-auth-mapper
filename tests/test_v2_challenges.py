@@ -25,7 +25,7 @@ from authmapper.core.v2 import (
     SubjectKind,
     UnresolvedRecord,
 )
-from authmapper.spike.express import SpikeArtifact, extract_express_spike
+from tests.support.express_spike import SpikeArtifact, extract_express_spike
 
 SPAN = SourceSpan("challenge.fixture", 1, 1, 1, 20)
 

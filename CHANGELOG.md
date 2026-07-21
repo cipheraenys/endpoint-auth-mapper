@@ -30,6 +30,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The Rust frontend now uses the standard-library `tomllib` on Python 3.11+ and
   only requires the `tomli` backport on Python 3.10, removing a redundant runtime
   dependency for most supported interpreters.
+- Relocated the non-public M1 Express spike extractor from `src/authmapper/spike`
+  to `tests/support`; it was test-only scaffolding and no longer ships in the
+  installed package.
 
 ### Fixed
 - Project config and baseline artifacts can be committed intentionally.

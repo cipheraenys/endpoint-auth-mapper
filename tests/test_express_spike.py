@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from authmapper.spike.express import extract_express_spike
+from tests.support.express_spike import extract_express_spike
 
 
 def _artifact(fixtures_dir: Path, name: str):
