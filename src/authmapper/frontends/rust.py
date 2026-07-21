@@ -2,14 +2,19 @@
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-import tomli as tomllib
 import tree_sitter_rust
 from tree_sitter import Language, Node, Parser
+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:  # pragma: no cover - Python 3.10 relies on the tomli backport
+    import tomli as tomllib
 
 from authmapper.core.v2 import AdapterInput, CoverageStatus, Diagnostic, DiagnosticLevel, SourceSpan
 
