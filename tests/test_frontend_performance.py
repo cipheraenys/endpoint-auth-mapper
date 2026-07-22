@@ -91,7 +91,7 @@ def test_rust_frontend_performance_is_deterministic_and_bounded(tmp_path: Path):
     elapsed = time.perf_counter() - start
 
     assert analysis.diagnostics == ()
-    assert len(analysis.sources) >= RUST_FILE_COUNT
+    assert len(analysis.sources) == RUST_FILE_COUNT
     assert elapsed < CEILING_SECONDS
 
     _write_receipt(tmp_path, "rust", RUST_FILE_COUNT, total_bytes, elapsed, len(analysis.sources))
