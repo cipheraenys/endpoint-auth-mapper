@@ -177,7 +177,7 @@ def test_cli_rejects_write_baseline_conflict(tmp_path: Path):
 
 
 def test_cli_missing_config_is_ok(fixtures_dir: Path):
-    # No .authmap.json — should run fine.
+    # No .authmap.json - should run fine.
     code = main(["--project", str(fixtures_dir / "php"), "--quiet"])
     assert code == 0
 

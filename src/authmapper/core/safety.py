@@ -3,10 +3,10 @@
 Every function here exists to uphold one of the tool's non-negotiable
 guarantees (see SECURITY.md):
 
-    * ReDoS resistance   — regexes run under a wall-clock budget.
-    * Path confinement   — output can only be written beneath an allowed root.
-    * Redaction          — snippets never echo probable secrets.
-    * Bounded reads      — oversized / binary files are refused, not parsed.
+    * ReDoS resistance   - regexes run under a wall-clock budget.
+    * Path confinement   - output can only be written beneath an allowed root.
+    * Redaction          - snippets never echo probable secrets.
+    * Bounded reads      - oversized / binary files are refused, not parsed.
 
 The module is deliberately dependency-free and side-effect-free except for the
 explicit filesystem checks in :func:`ensure_within`.
@@ -138,7 +138,7 @@ def _worker_loop(
     """Worker process loop: receive (pattern_src, flags, text), return matches.
 
     Runs in a spawned child process.  The parent can hard-terminate this process
-    on timeout — unlike a daemon thread, the OS reclaims all resources cleanly.
+    on timeout - unlike a daemon thread, the OS reclaims all resources cleanly.
     """
     while True:
         item = task_queue.get()
@@ -149,7 +149,7 @@ def _worker_loop(
             pattern = re.compile(pattern_src, flags)
             serialized = [_serialize_match(m) for m in pattern.finditer(text)]
             result_queue.put(("ok", serialized))
-        except Exception as exc:  # noqa: BLE001 — propagated to caller
+        except Exception as exc:  # noqa: BLE001 - propagated to caller
             result_queue.put(("error", str(exc)))
 
 
@@ -206,7 +206,7 @@ class SafeMatcher:
                 try:
                     q.close()
                     q.join_thread()
-                except Exception:  # noqa: BLE001, S110 — best-effort cleanup
+                except Exception:  # noqa: BLE001, S110 - best-effort cleanup
                     pass
         self._task_q = None
         self._result_q = None
@@ -228,7 +228,7 @@ class SafeMatcher:
         try:
             status, payload = self._result_q.get(timeout=self._timeout)
         except Exception as exc:
-            # Queue timeout or broken pipe — worker took too long or crashed.
+            # Queue timeout or broken pipe - worker took too long or crashed.
             self._teardown_worker()
             raise RegexTimeout(f"regex exceeded {self._timeout}s budget") from exc
 
@@ -243,11 +243,11 @@ class SafeMatcher:
             try:
                 self._task_q.put(None)  # Graceful sentinel
                 self._worker.join(timeout=2.0)
-            except Exception:  # noqa: BLE001 — best-effort graceful shutdown
+            except Exception:  # noqa: BLE001 - best-effort graceful shutdown
                 pass
         self._teardown_worker()
 
-    def __del__(self) -> None:  # pragma: no cover — destructor safety net
+    def __del__(self) -> None:  # pragma: no cover - destructor safety net
         with contextlib.suppress(Exception):
             self.close()
 
@@ -297,7 +297,7 @@ def ensure_within(root: Path, candidate: Path) -> Path:
     containing ``..``). Returns the resolved, confined path.
     """
     root_resolved = root.resolve()
-    if candidate.is_absolute():  # noqa: SIM108 — readability over ternary for path ops
+    if candidate.is_absolute():  # noqa: SIM108 - readability over ternary for path ops
         target = candidate.resolve()
     else:
         target = (root_resolved / candidate).resolve()

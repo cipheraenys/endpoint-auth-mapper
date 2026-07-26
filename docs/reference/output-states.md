@@ -7,7 +7,7 @@ verdicts or Verified framework assurance.
 | State | Severity mapping | Description |
 |---|---|---|
 | `EXPOSED` | `CRITICAL` or `HIGH` | A high-confidence candidate matched without an associated legacy auth pattern. |
-| `UNKNOWN` | `MEDIUM` | Structure or guard could not be confidently resolved — review required. |
+| `UNKNOWN` | `MEDIUM` | Structure or guard could not be confidently resolved - review required. |
 | `PROTECTED` | `INFO` | A high-confidence same-line legacy auth pattern was associated; not enforcement proof. |
 | `PUBLIC` | `INFO` | Intentionally public through committed `public_paths` policy or an explicit custom rule-pack exemption. |
 

@@ -7,7 +7,7 @@ this makes the fail-safe policy explicit, testable, and easy to audit.
 The single most important rule lives here:
 
     An endpoint is only ever EXPOSED when discovery confidence is HIGH.
-    Anything less collapses to UNKNOWN — silence is never treated as safety.
+    Anything less collapses to UNKNOWN - silence is never treated as safety.
 """
 
 from __future__ import annotations

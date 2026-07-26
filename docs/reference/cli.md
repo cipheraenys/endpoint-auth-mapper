@@ -44,20 +44,20 @@ authmap [--project PATH] [--format {table,json,sarif}] [--output STEM]
 |---|---|---|---|
 | `--project PATH` | `-p` | `.` | Path to the project root to analyze. |
 | `--format FORMAT` | `-f` | `table` | Output format: `table`, `json`, or `sarif`. |
-| `--output STEM` | `-o` | — | Write the report under the report dir with this stem (implies file output). |
+| `--output STEM` | `-o` | - | Write the report under the report dir with this stem (implies file output). |
 | `--report-dir DIR` | | `.security-reports` | Directory for confidential reports. |
-| `--fail-on LEVEL` | | — | Exit `1` when findings at/above LEVEL exist. Accepts a state (`EXPOSED`, `UNKNOWN`) or severity (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`, `INFO`). Unknown values are rejected. |
+| `--fail-on LEVEL` | | - | Exit `1` when findings at/above LEVEL exist. Accepts a state (`EXPOSED`, `UNKNOWN`) or severity (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`, `INFO`). Unknown values are rejected. |
 | `--min-confidence` | | `medium` | Minimum confidence for a finding to count toward `--fail-on`. One of `low`, `medium`, `high`. |
-| `--exclude NAMES` | | — | Comma-separated directory names to exclude in addition to defaults. |
-| `--rulepacks DIRS` | | — | Comma-separated extra rule-pack directories to load. |
-| `--baseline PATH` | | — | Path to a baseline JSON; findings present in it do not fail the run. |
-| `--write-baseline PATH` | | — | Write a baseline of current findings to PATH and exit 0. |
+| `--exclude NAMES` | | - | Comma-separated directory names to exclude in addition to defaults. |
+| `--rulepacks DIRS` | | - | Comma-separated extra rule-pack directories to load. |
+| `--baseline PATH` | | - | Path to a baseline JSON; findings present in it do not fail the run. |
+| `--write-baseline PATH` | | - | Write a baseline of current findings to PATH and exit 0. |
 | `--regex-timeout SECONDS` | | `1.0` | Positive, finite per-regex wall-clock budget in seconds (ReDoS guard). |
 | `--interactive` | `-i` | off | Open the interactive terminal UI (Layer 2) after scanning. |
 | `--experimental-ast` | | off | Enable experimental AST-based analysis (requires `tree-sitter`). |
 | `--strict-coverage` | | off | Exit `2` when eligible source is unsupported, skipped, or errors. |
 | `--quiet` | `-q` | off | Suppress the rendered report on stdout. |
-| `--version` | | — | Print the version and exit. |
+| `--version` | | - | Print the version and exit. |
 
 ## Exit codes
 

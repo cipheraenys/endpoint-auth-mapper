@@ -47,7 +47,7 @@ def test_severity_mapping():
 
 
 def test_looks_public_rejects_prefix_overlap():
-    """'/healthcare' must NOT match '/health' — segment boundaries required."""
+    """'/healthcare' must NOT match '/health' - segment boundaries required."""
     assert not looks_public("/healthcare", ())
     assert not looks_public("/statuspages", ())
     assert not looks_public("/pingdom-webhook", ())

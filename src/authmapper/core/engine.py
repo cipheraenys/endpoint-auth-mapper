@@ -7,9 +7,9 @@ classification together into a :class:`ScanResult`. It contains the mechanical
 auditable.
 
 Guarantees upheld here:
-    * read-only  — only text is inspected; nothing is imported or executed.
-    * resilient  — a failure on one file is captured as a ScanError, not raised.
-    * ReDoS-safe — all matching goes through :class:`SafeMatcher`.
+    * read-only  - only text is inspected; nothing is imported or executed.
+    * resilient  - a failure on one file is captured as a ScanError, not raised.
+    * ReDoS-safe - all matching goes through :class:`SafeMatcher`.
 """
 
 from __future__ import annotations

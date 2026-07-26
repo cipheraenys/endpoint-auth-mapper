@@ -23,7 +23,7 @@ Unknown fields, wrong JSON types, and unknown enum values stop before scanning.
 - `excludes`: Array of directory name strings to skip.
 - `min_confidence`: String (`low`, `medium`, `high`).
 - `fail_on`: String (`EXPOSED`, `UNKNOWN`, `CRITICAL`, `HIGH`, `MEDIUM`, `LOW`, `INFO`).
-- `experimental_ast`: Boolean — enable experimental AST-based analysis (default: `false`).
+- `experimental_ast`: Boolean - enable experimental AST-based analysis (default: `false`).
 - `public_paths`: Array of route prefixes explicitly declared public. Paths must
   start with `/`; descendants match on path-segment boundaries.
 - `strict_coverage`: Boolean. Exit `2` when eligible source is `UNSUPPORTED`,
