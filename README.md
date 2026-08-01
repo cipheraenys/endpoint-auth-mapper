@@ -116,14 +116,14 @@ authmap --project . --evidence-scan express \
 
 ## The three layers
 
-1. **Batch CLI** — one run, one report, clean exit codes. The core.
-2. **Interactive terminal UI** — a stdlib-only ANSI rich TUI to browse,
+1. **Batch CLI** - one run, one report, clean exit codes. The core.
+2. **Interactive terminal UI** - a stdlib-only ANSI rich TUI to browse,
    filter, search, and export results (`--interactive`). Falls back to the
    table report on terminals without ANSI support.
-3. **CI gate** — pre-commit hook and GitHub/GitLab templates in [`ci/`](./ci).
+3. **CI gate** - pre-commit hook and GitHub/GitLab templates in [`ci/`](./ci).
    Legacy `--fail-on` is a compatibility heuristic; evidence policy gates only
    Verified v2 capabilities. This is the intended
-   "service" placement — an on-demand gate, never a running daemon.
+   "service" placement - an on-demand gate, never a running daemon.
 
 ## Exit codes (CI contract)
 
@@ -152,7 +152,7 @@ flowchart TD
     D -->|Yes| E["🔵 PUBLIC"]
     D -->|No| F{High confidence?}
     F -->|Yes| G["🔴 EXPOSED"]
-    F -->|No| H["🟡 UNKNOWN — fail-safe"]
+    F -->|No| H["🟡 UNKNOWN - fail-safe"]
 ```
 
 Full details in the [Architecture explanation](./docs/explanation/architecture.md).
@@ -161,14 +161,15 @@ Full details in the [Architecture explanation](./docs/explanation/architecture.m
 
 The project documentation is organized using the [Diátaxis framework](https://diataxis.fr/). Start at the [Docs overview](./docs/README.md).
 
-- [**Tutorials**](./docs/tutorials/) — Guided step-by-step introductions (e.g. Getting started).
-- [**How-to guides**](./docs/how-to/) — Task-oriented instructions (e.g. Gating CI, suppressing findings).
-- [**Reference**](./docs/reference/) — Technical descriptions (e.g. CLI flags, rule pack schema).
-- [**Explanation**](./docs/explanation/) — Background context (e.g. Architecture, classification model).
+- [**Tutorials**](./docs/tutorials/) - Guided step-by-step introductions (e.g. Getting started).
+- [**How-to guides**](./docs/how-to/) - Task-oriented instructions (e.g. Gating CI, suppressing findings).
+- [**Reference**](./docs/reference/) - Technical descriptions (e.g. CLI flags, rule pack schema).
+- [**Explanation**](./docs/explanation/) - Background context (e.g. Architecture, classification model).
 
 Other important documents:
-- [`SECURITY.md`](./SECURITY.md) — dual-use statement, threat model, mitigations
-- [`CONTRIBUTING.md`](./CONTRIBUTING.md) — dev setup, tests, style
+- [`SECURITY.md`](./SECURITY.md) - dual-use statement, threat model, mitigations
+- [`CONTRIBUTING.md`](./CONTRIBUTING.md) - dev setup, tests, style
+- [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md) - community standards
 
 ## Scope of use
 
@@ -177,4 +178,4 @@ It performs no network activity and cannot interact with running systems.
 
 ## License
 
-MIT — see [`LICENSE`](./LICENSE).
+MIT - see [`LICENSE`](./LICENSE).

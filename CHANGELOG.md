@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-06
+
 ### Added
 - Strict, versioned project-config validation and explicit `public_paths` policy.
 - Source coverage records in JSON, SARIF, table, and TUI summaries.
@@ -33,6 +35,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Relocated the non-public M1 Express spike extractor from `src/authmapper/spike`
   to `tests/support`; it was test-only scaffolding and no longer ships in the
   installed package.
+- Table report header and SARIF messages use plain hyphens instead of
+  typographic dashes.
 
 ### Fixed
 - Project config and baseline artifacts can be committed intentionally.
@@ -42,7 +46,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.1.2] - 2026-07-14
 
 ### Added
-- CI pipeline with Python 3.10–3.13 test matrix.
+- CI pipeline with Python 3.10-3.13 test matrix.
 - Experimental `--experimental-ast` flag for opt-in AST-based analysis.
 
 ### Changed
@@ -96,6 +100,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Documentation: README, SECURITY (dual-use statement), ARCHITECTURE,
   RULEPACK_SCHEMA, USAGE, and CONTRIBUTING.
 
+[0.2.0]: https://github.com/cipheraenys/endpoint-auth-mapper/releases/tag/v0.2.0
 [0.1.2]: https://github.com/cipheraenys/endpoint-auth-mapper/releases/tag/v0.1.2
 [0.1.1]: https://github.com/cipheraenys/endpoint-auth-mapper/releases/tag/v0.1.1
 [0.1.0]: https://github.com/cipheraenys/endpoint-auth-mapper/releases/tag/v0.1.0
