@@ -24,12 +24,13 @@ from pathlib import Path
 from . import __version__
 from .app.baseline import build_baseline
 from .app.config import ConfigError, RunConfig
-from .app.evidence_gate import classify_gate_exit, evaluate_evidence_gate
+from .app.evidence_gate import EvidenceGateRun, classify_gate_exit, evaluate_evidence_gate
 from .app.evidence_runner import run_express_evidence_scan
 from .app.exception_audit import audit_evidence_exceptions
 from .app.runner import EXIT_ERROR, Runner, RunnerError
 from .core.v2 import (
     EvidenceExceptionError,
+    EvidencePolicy,
     EvidencePolicyError,
     explain_adapter_document,
     load_evidence_exceptions,
@@ -235,6 +236,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 Path(args.project), tuple(["authmap", *(argv if argv is not None else sys.argv[1:])])
             )
             exit_code = 0
+            policy: EvidencePolicy | None = None
+            gate_run: EvidenceGateRun | None = None
             if args.evidence_policy:
                 policy = load_evidence_policy(Path(args.evidence_policy).expanduser().resolve())
                 gate_run = evaluate_evidence_gate(result.report, policy)
@@ -260,13 +263,13 @@ def main(argv: Sequence[str] | None = None) -> int:
                 evidence_sarif = json.loads(render_evidence_sarif(result.report))
                 output = (
                     render_gate_audit_sarif(evidence_sarif, result.report, policy, gate_run)
-                    if args.evidence_policy
+                    if policy is not None and gate_run is not None
                     else json.dumps(evidence_sarif, indent=2, sort_keys=True)
                 )
             elif args.explain_adapter:
                 document = (
                     json.loads(render_gate_audit_json(result.report, policy, gate_run))
-                    if args.evidence_policy
+                    if policy is not None and gate_run is not None
                     else {"evidence_report": json.loads(render_evidence_json(result.report))}
                 )
                 document["adapter_explanation"] = explain_adapter_document(result.explanation)
@@ -274,7 +277,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             else:
                 output = (
                     render_gate_audit_json(result.report, policy, gate_run)
-                    if args.evidence_policy
+                    if policy is not None and gate_run is not None
                     else render_evidence_json(result.report)
                 )
             if args.output:
