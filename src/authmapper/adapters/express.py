@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
@@ -14,8 +15,10 @@ from authmapper.core.v2 import (
     AdapterInput,
     ApplicabilityResult,
     ApplicabilityState,
+    CapabilityMaturity,
     Diagnostic,
     DiagnosticLevel,
+    EvidenceGraph,
     Fact,
     FactKind,
     Relation,
@@ -35,6 +38,8 @@ from authmapper.frontends.javascript import (
     module_bindings,
     resolve_local_module,
 )
+
+from .express_semantics import build_express_graph
 
 __all__ = ["ExpressAdapter", "MAX_SOURCE_BYTES"]
 
@@ -64,6 +69,18 @@ class ExpressAdapter:
 
     id = "express"
     version = "0.1.0"
+    source_extensions = frozenset({".js", ".mjs", ".cjs"})
+    capability_maturity: Mapping[str, CapabilityMaturity] = {
+        "auth_association": CapabilityMaturity.VERIFIED,
+        "endpoint_discovery": CapabilityMaturity.VERIFIED,
+        "public_override": CapabilityMaturity.EXPERIMENTAL,
+        "route_composition": CapabilityMaturity.VERIFIED,
+        "scope_resolution": CapabilityMaturity.VERIFIED,
+    }
+    ownership_rationale = "nearest package declares Express and source resolves Express binding"
+
+    def build_graph(self, artifact: AdapterArtifact) -> EvidenceGraph:
+        return build_express_graph(artifact, adapter_version=self.version)
 
     def applicability(self, input_data: AdapterInput) -> ApplicabilityResult:
         parsed, diagnostics = self._parse_inputs(input_data)

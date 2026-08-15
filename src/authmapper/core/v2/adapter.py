@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from .model import (
     CapabilityProvenance,
@@ -16,6 +17,10 @@ from .model import (
     Subject,
     UnresolvedRecord,
 )
+
+if TYPE_CHECKING:
+    from .graph import EvidenceGraph
+    from .package import ApplicabilityResult, CapabilityMaturity
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,7 +46,23 @@ class AdapterArtifact:
 class Adapter(Protocol):
     id: str
     version: str
+    source_extensions: frozenset[str]
+    """Lowercase file suffixes this adapter can analyze, including the leading dot."""
+
+    capability_maturity: Mapping[str, CapabilityMaturity]
+    """Declared maturity per capability id, reported verbatim in evidence output."""
+
+    ownership_rationale: str
+    """Human-readable reason attached to files this adapter claims."""
+
+    def applicability(self, input_data: AdapterInput) -> ApplicabilityResult:
+        """Decide whether this adapter owns the project, with supporting evidence."""
+        ...
 
     def analyze(self, input_data: AdapterInput) -> AdapterArtifact:
         """Analyze source without executing target code."""
+        ...
+
+    def build_graph(self, artifact: AdapterArtifact) -> EvidenceGraph:
+        """Lift syntactic evidence into the framework-neutral evidence graph."""
         ...
