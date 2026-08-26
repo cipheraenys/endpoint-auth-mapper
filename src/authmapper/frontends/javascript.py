@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -12,6 +11,8 @@ import tree_sitter_javascript
 from tree_sitter import Language, Node, Parser
 
 from authmapper.core.v2 import AdapterInput, CoverageStatus, Diagnostic, DiagnosticLevel, SourceSpan
+from authmapper.frontends._treesitter import file_span as _file_span
+from authmapper.frontends._treesitter import span, text, walk
 
 SUPPORTED_SUFFIXES = (".js", ".mjs", ".cjs")
 DISCOVERY_SUFFIXES = (".ts", ".tsx")
@@ -571,26 +572,6 @@ def default_export(root: Node, source: bytes) -> str | None:
     return None
 
 
-def walk(node: Node) -> Iterable[Node]:
-    yield node
-    for child in node.children:
-        yield from walk(child)
-
-
-def text(node: Node, source: bytes) -> str:
-    return source[node.start_byte : node.end_byte].decode("utf-8")
-
-
-def span(path: str, node: Node) -> SourceSpan:
-    return SourceSpan(
-        path,
-        node.start_point.row + 1,
-        node.start_point.column + 1,
-        node.end_point.row + 1,
-        node.end_point.column + 1,
-    )
-
-
 def literal_string(node: Node | None, source: bytes) -> str | None:
     if node is None or node.type != "string":
         return None
@@ -678,10 +659,6 @@ def _failure_coverage(
     return JavaScriptFailureCoverage(
         f"coverage:{suffix}", target_path, status, diagnostic.id, diagnostic.message
     )
-
-
-def _file_span(path: str) -> SourceSpan:
-    return SourceSpan(path, 1, 1, 1, 1)
 
 
 def _relative(path: Path, root: Path) -> str:

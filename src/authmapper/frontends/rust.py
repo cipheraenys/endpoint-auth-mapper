@@ -17,6 +17,8 @@ else:  # pragma: no cover - Python 3.10 relies on the tomli backport
     import tomli as tomllib
 
 from authmapper.core.v2 import AdapterInput, CoverageStatus, Diagnostic, DiagnosticLevel, SourceSpan
+from authmapper.frontends._treesitter import file_span as _file_span
+from authmapper.frontends._treesitter import span, text, walk
 
 SUPPORTED_SUFFIXES = (".rs",)
 MAX_SOURCE_FILES = 10_000
@@ -646,26 +648,6 @@ def _split_top_level(value: str) -> tuple[str, ...]:
     return tuple(result)
 
 
-def walk(node: Node) -> Iterable[Node]:
-    yield node
-    for child in node.children:
-        yield from walk(child)
-
-
-def text(node: Node, source: bytes) -> str:
-    return source[node.start_byte : node.end_byte].decode("utf-8")
-
-
-def span(path: str, node: Node) -> SourceSpan:
-    return SourceSpan(
-        path,
-        node.start_point.row + 1,
-        node.start_point.column + 1,
-        node.end_point.row + 1,
-        node.end_point.column + 1,
-    )
-
-
 def _failure_coverage(
     diagnostic: Diagnostic,
     target_path: str,
@@ -678,10 +660,6 @@ def _failure_coverage(
         diagnostic.id,
         diagnostic.message,
     )
-
-
-def _file_span(path: str) -> SourceSpan:
-    return SourceSpan(path, 1, 1, 1, 1)
 
 
 def _relative(path: Path, root: Path) -> str:

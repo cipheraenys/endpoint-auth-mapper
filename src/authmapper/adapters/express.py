@@ -30,6 +30,8 @@ from authmapper.core.v2 import (
     SubjectKind,
     UnresolvedRecord,
 )
+from authmapper.frontends._treesitter import span as _span
+from authmapper.frontends._treesitter import text as _text
 from authmapper.frontends.javascript import (
     MAX_SOURCE_BYTES,
     JavaScriptFrontend,
@@ -1244,20 +1246,6 @@ def _walk(node: Node):
     yield node
     for child in node.named_children:
         yield from _walk(child)
-
-
-def _text(node: Node, source: bytes) -> str:
-    return source[node.start_byte : node.end_byte].decode("utf-8")
-
-
-def _span(path: str, node: Node) -> SourceSpan:
-    return SourceSpan(
-        path,
-        node.start_point.row + 1,
-        node.start_point.column + 1,
-        node.end_point.row + 1,
-        node.end_point.column + 1,
-    )
 
 
 def _relative(path: Path, root: Path) -> str:
