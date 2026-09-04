@@ -6,6 +6,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- CLI gate variables are initialized before their conditional reads, removing a
+  latent unbound-variable path inside the evidence block.
+
+### Changed
+
+- Evidence scans dispatch through an adapter registry. Source suffixes,
+  capability maturity, the ownership rationale, and graph building now live on
+  the adapter protocol instead of the application runner.
+- Parser frontends share their tree-sitter helpers through
+  `frontends/_treesitter.py` instead of keeping verbatim copies.
+
 ## [0.2.0] - 2026-09-06
 
 ### Added
