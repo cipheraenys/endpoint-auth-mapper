@@ -1,4 +1,4 @@
-# Endpoint & Auth Mapper — GitLab CI template.
+# Endpoint & Auth Mapper - GitLab CI template.
 #
 # Demonstrates universal CI portability: the same CLI + exit-code contract works
 # on any runner. Include or copy the job into your .gitlab-ci.yml.

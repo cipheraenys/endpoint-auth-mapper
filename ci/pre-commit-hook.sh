@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Endpoint & Auth Mapper — local pre-commit gate.
+# Endpoint & Auth Mapper - local pre-commit gate.
 #
 # Blocks a commit that introduces a high-confidence EXPOSED endpoint. Findings
 # already recorded in .authmap-baseline.json are ignored, so legacy debt does

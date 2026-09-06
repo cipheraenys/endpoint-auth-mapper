@@ -5,8 +5,8 @@ GitHub code scanning, Azure DevOps, and many IDEs. Emitting it lets the tool
 plug into existing security dashboards with no glue code.
 
 Actionable findings (EXPOSED / UNKNOWN) are always emitted.  Suppressed
-findings of these states are also emitted — with a SARIF ``suppressions``
-array — so that auditors can verify suppression justifications.
+findings of these states are also emitted - with a SARIF ``suppressions``
+array - so that auditors can verify suppression justifications.
 PROTECTED/PUBLIC endpoints are informational and omitted.
 """
 
@@ -85,7 +85,7 @@ def _rules() -> list[dict]:
 def _result(finding: Finding) -> dict:
     rule_id = "exposed-endpoint" if finding.auth_state is AuthState.EXPOSED else "unknown-endpoint"
     ep = finding.endpoint
-    message = f"{finding.auth_state}: {ep.method} {ep.route} — {finding.rationale}"
+    message = f"{finding.auth_state}: {ep.method} {ep.route} - {finding.rationale}"
     result: dict = {
         "ruleId": rule_id,
         "level": _SARIF_LEVEL[finding.severity],

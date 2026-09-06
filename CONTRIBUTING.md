@@ -36,7 +36,7 @@ mypy src          # type-check
   touches classification must preserve the invariant tested in
   `tests/test_classifier.py`.
 - **No network, ever.** Do not add sockets, HTTP clients, or URL inputs.
-- **Docstrings explain "why", comments explain intent** — not restating code.
+- **Docstrings explain "why", comments explain intent** - not restating code.
 
 ## Commit style
 

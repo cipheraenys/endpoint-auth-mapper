@@ -1,4 +1,4 @@
-# Endpoint & Auth Mapper — GitHub Actions workflow
+# Endpoint & Auth Mapper - GitHub Actions workflow
 #
 # Placement of the "service": an on-demand CI gate, not a running daemon. The
 # legacy analyzer runs on pull requests, uploads advisory SARIF, and applies the

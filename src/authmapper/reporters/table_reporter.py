@@ -41,7 +41,7 @@ def render_table(result: ScanResult) -> str:
     """Render ``result`` as a console report string."""
     color = _use_color()
     lines: list[str] = []
-    lines.append(_bold("Endpoint & Auth Mapper — report", use_color=color))
+    lines.append(_bold("Endpoint & Auth Mapper - report", use_color=color))
     lines.append(
         "CONFIDENTIAL: contains unmitigated attack surface. Do not commit or share broadly."
     )

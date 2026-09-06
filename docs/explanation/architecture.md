@@ -52,40 +52,40 @@ model.ScanResult (Findings, coverage, errors, summary)
 
 ### Core (pure analysis, no output I/O)
 
-- **`model.py`** — Immutable value objects (`Endpoint`, `Finding`, `AuthState`, `Confidence`, `Severity`, `ScanResult`). The shared vocabulary of every layer.
-- **`safety.py`** — Cross-cutting safety primitives: bounded/encoding-aware file reads, ReDoS-bounded matching, secret redaction, and output-path confinement.
-- **`walker.py`** — Eligible-file discovery with `**`-aware globbing, ignore/exclude accounting, and per-file guards. Yields decoded text and coverage outcomes; performs no auth analysis.
-- **`rulepack.py`** — Loads, validates, and compiles JSON rule packs into typed `RulePack` objects. The boundary between on-disk data and the engine.
-- **`classifier.py`** — The pure decision policy. Contains the fail-safe rule: `EXPOSED` requires high confidence, otherwise it resolves to `UNKNOWN`.
-- **`engine.py`** — The orchestrator that applies rule packs to files and emits findings. Mechanical "how"; the policy "meaning" lives in `classifier`.
+- **`model.py`** - Immutable value objects (`Endpoint`, `Finding`, `AuthState`, `Confidence`, `Severity`, `ScanResult`). The shared vocabulary of every layer.
+- **`safety.py`** - Cross-cutting safety primitives: bounded/encoding-aware file reads, ReDoS-bounded matching, secret redaction, and output-path confinement.
+- **`walker.py`** - Eligible-file discovery with `**`-aware globbing, ignore/exclude accounting, and per-file guards. Yields decoded text and coverage outcomes; performs no auth analysis.
+- **`rulepack.py`** - Loads, validates, and compiles JSON rule packs into typed `RulePack` objects. The boundary between on-disk data and the engine.
+- **`classifier.py`** - The pure decision policy. Contains the fail-safe rule: `EXPOSED` requires high confidence, otherwise it resolves to `UNKNOWN`.
+- **`engine.py`** - The orchestrator that applies rule packs to files and emits findings. Mechanical "how"; the policy "meaning" lives in `classifier`.
 
 ### Data
 
-- **`rulepacks/*.json`** — Declarative candidate discovery and auth-signal recognition. New syntax may fit a new pack; verified framework semantics usually require an adapter.
+- **`rulepacks/*.json`** - Declarative candidate discovery and auth-signal recognition. New syntax may fit a new pack; verified framework semantics usually require an adapter.
 
 ### Presentation
 
-- **`reporters/`** — `table` (human), `json` (machine/baseline), `sarif` (GitHub/Azure code scanning). Pure functions mapping `ScanResult -> str`.
+- **`reporters/`** - `table` (human), `json` (machine/baseline), `sarif` (GitHub/Azure code scanning). Pure functions mapping `ScanResult -> str`.
 
 ### Application
 
-- **`app/config.py`** — The immutable `RunConfig`, optionally merged with a project `.authmap.json`.
-- **`app/baseline.py`** — Fingerprinting for incremental adoption (fail only on *new* findings).
-- **`app/runner.py`** — The single use-case entry point: load packs → scan → filter (confidence/baseline) → render → write confidential report → compute exit code. Both CLI and TUI call this, so behavior never diverges.
+- **`app/config.py`** - The immutable `RunConfig`, optionally merged with a project `.authmap.json`.
+- **`app/baseline.py`** - Fingerprinting for incremental adoption (fail only on *new* findings).
+- **`app/runner.py`** - The single use-case entry point: load packs → scan → filter (confidence/baseline) → render → write confidential report → compute exit code. Both CLI and TUI call this, so behavior never diverges.
 
 ### Interface
 
-- **`cli.py`** — Thin argument parsing (Layer 1). Delegates all work to `Runner`.
-- **`tui/`** — Rich terminal UI (Layer 2). Stdlib-only ANSI rendering:
-  - `app.py` — `TuiApp` orchestrator (event loop, state, keyboard dispatch).
-  - `screen.py` — `ScreenBuffer` + `AnsiBackend`, terminal sizing, Windows VT.
-  - `input.py` — Cross-platform raw key reading (`msvcrt` / `termios`).
-  - `widgets.py` — Stateless list, detail, status bar, help overlay renderers.
-  - `theme.py` — Colorblind-safe palette; honors `NO_COLOR` / `TERM=dumb`.
+- **`cli.py`** - Thin argument parsing (Layer 1). Delegates all work to `Runner`.
+- **`tui/`** - Rich terminal UI (Layer 2). Stdlib-only ANSI rendering:
+  - `app.py` - `TuiApp` orchestrator (event loop, state, keyboard dispatch).
+  - `screen.py` - `ScreenBuffer` + `AnsiBackend`, terminal sizing, Windows VT.
+  - `input.py` - Cross-platform raw key reading (`msvcrt` / `termios`).
+  - `widgets.py` - Stateless list, detail, status bar, help overlay renderers.
+  - `theme.py` - Colorblind-safe palette; honors `NO_COLOR` / `TERM=dumb`.
 
 ## Why a modular monolith?
 
-- **Not a single script:** Separation makes the fail-safe policy, safety primitives, and language rules independently auditable and testable — critical for a security tool.
+- **Not a single script:** Separation makes the fail-safe policy, safety primitives, and language rules independently auditable and testable - critical for a security tool.
 - **Not microservices:** There is no runtime to distribute. A monolith ships as one auditable artifact with zero network surface, which aligns perfectly with a secure, local-analysis posture.
 
 ## V2 evidence contracts
